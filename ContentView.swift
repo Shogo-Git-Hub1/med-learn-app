@@ -1,3 +1,4 @@
+// 画面の土台（タブ切り替え+クイズ表示）
 import SwiftUI
 
 struct ContentView: View {

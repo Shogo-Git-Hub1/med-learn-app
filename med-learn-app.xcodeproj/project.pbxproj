@@ -22,11 +22,8 @@
 		6FD06C402FA07F7800CDBA0E /* QuizView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuizView.swift; sourceTree = "<group>"; };
 		6FD06C412FA07F7800CDBA0E /* QuizViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuizViewModel.swift; sourceTree = "<group>"; };
 		6FD06C432FA07F7800CDBA0E /* ReviewView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReviewView.swift; sourceTree = "<group>"; };
-		6FD06C462FA07F7800CDBA0E /* ios-frame.jsx */ = {isa = PBXFileReference; lastKnownFileType = text; path = "ios-frame.jsx"; sourceTree = "<group>"; };
 		6FD06C472FA07F7800CDBA0E /* med_learn_appApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = med_learn_appApp.swift; sourceTree = "<group>"; };
 		6FD06C482FA07F7800CDBA0E /* med-learn-app.xcodeproj */ = {isa = PBXFileReference; lastKnownFileType = "wrapper.pb-project"; path = "med-learn-app.xcodeproj"; sourceTree = "<group>"; };
-		6FD06C492FA07F7800CDBA0E /* MedQuiz App.html */ = {isa = PBXFileReference; lastKnownFileType = text.html; path = "MedQuiz App.html"; sourceTree = "<group>"; };
-		6FD06C4A2FA07F7800CDBA0E /* README.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = README.md; sourceTree = "<group>"; };
 		6FD06C4B2FA07F7800CDBA0E /* BadgeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BadgeView.swift; sourceTree = "<group>"; };
 		6FD06C4C2FA07F7800CDBA0E /* StatCardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StatCardView.swift; sourceTree = "<group>"; };
 		6FD06C4D2FA07F7800CDBA0E /* XPBarView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = XPBarView.swift; sourceTree = "<group>"; };
@@ -51,11 +48,8 @@
 				6FD06C302FA07F7800CDBA0E /* ContentView.swift */,
 				6FD06C382FA07F7800CDBA0E /* Core */,
 				6FD06C452FA07F7800CDBA0E /* Features */,
-				6FD06C462FA07F7800CDBA0E /* ios-frame.jsx */,
 				6FD06C472FA07F7800CDBA0E /* med_learn_appApp.swift */,
 				6FD06C482FA07F7800CDBA0E /* med-learn-app.xcodeproj */,
-				6FD06C492FA07F7800CDBA0E /* MedQuiz App.html */,
-				6FD06C4A2FA07F7800CDBA0E /* README.md */,
 				6FD06C512FA07F7800CDBA0E /* Shared */,
 				6FC71FEA2FA06BC8007D6E99 /* Products */,
 			);
@@ -392,6 +386,7 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = DD8GSQZ9AX;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
@@ -423,6 +418,7 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = DD8GSQZ9AX;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
