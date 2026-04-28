@@ -1,0 +1,2061 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>MedQuiz — 医療学習アプリ</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;600;700;800&display=swap" rel="stylesheet"/>
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html, body { width: 100%; height: 100%; background: #e8edf5; font-family: 'Noto Sans JP', sans-serif; }
+body { display: flex; align-items: center; justify-content: center; min-height: 100vh; }
+#root { display: flex; flex-direction: column; align-items: center; gap: 32px; padding: 40px 20px; }
+
+/* Tweaks panel */
+#tweaks-panel {
+  position: fixed; bottom: 24px; right: 24px; z-index: 9999;
+  background: white; border-radius: 16px; padding: 20px;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.15); width: 260px;
+  font-family: 'Noto Sans JP', sans-serif; display: none;
+}
+#tweaks-panel.visible { display: block; }
+#tweaks-panel h3 { font-size: 14px; font-weight: 700; color: #111; margin-bottom: 16px; letter-spacing: 0.5px; text-transform: uppercase; }
+.tweak-group { margin-bottom: 14px; }
+.tweak-label { font-size: 12px; color: #666; margin-bottom: 6px; font-weight: 500; }
+.tweak-options { display: flex; gap: 6px; flex-wrap: wrap; }
+.tweak-btn { padding: 5px 12px; border-radius: 20px; border: 1.5px solid #ddd; background: white; font-size: 12px; cursor: pointer; font-family: 'Noto Sans JP', sans-serif; transition: all .15s; }
+.tweak-btn.active { border-color: #2563EB; background: #EFF6FF; color: #2563EB; font-weight: 600; }
+</style>
+</head>
+<body>
+<div id="root"></div>
+
+<!-- Tweaks Panel -->
+<div id="tweaks-panel">
+  <h3>Tweaks</h3>
+  <div class="tweak-group">
+    <div class="tweak-label">カラーテーマ</div>
+    <div class="tweak-options">
+      <button class="tweak-btn active" onclick="setTheme('blue')" id="theme-blue">ブルー</button>
+      <button class="tweak-btn" onclick="setTheme('teal')" id="theme-teal">ティール</button>
+      <button class="tweak-btn" onclick="setTheme('violet')" id="theme-violet">バイオレット</button>
+    </div>
+  </div>
+  <div class="tweak-group">
+    <div class="tweak-label">レイアウトバリエーション</div>
+    <div class="tweak-options">
+      <button class="tweak-btn active" onclick="setVariant('A')" id="var-A">A — クリーン</button>
+      <button class="tweak-btn" onclick="setVariant('B')" id="var-B">B — カード</button>
+      <button class="tweak-btn" onclick="setVariant('C')" id="var-C">C — ダーク</button>
+    </div>
+  </div>
+  <div class="tweak-group">
+    <div class="tweak-label">問題タイプ（プレビュー）</div>
+    <div class="tweak-options">
+      <button class="tweak-btn active" onclick="setQType('mcq')" id="qt-mcq">4択</button>
+      <button class="tweak-btn" onclick="setQType('tf')" id="qt-tf">○×</button>
+      <button class="tweak-btn" onclick="setQType('fill')" id="qt-fill">穴埋め</button>
+      <button class="tweak-btn" onclick="setQType('image')" id="qt-image">画像</button>
+    </div>
+  </div>
+</div>
+
+<script type="text/babel" src="ios-frame.jsx"></script>
+<script type="text/babel">
+// ─── Icon system (replaces all emojis) ──────────────────────
+function Icon({ name, size = 16, color = 'currentColor', strokeWidth = 2 }) {
+  const s = { width: size, height: size, display: 'inline-block', verticalAlign: 'middle', flexShrink: 0 };
+  const common = { viewBox: '0 0 24 24', fill: 'none', stroke: color, strokeWidth, strokeLinecap: 'round', strokeLinejoin: 'round', style: s };
+  switch (name) {
+    case 'heart': return <svg {...common}><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>;
+    case 'bolt': return <svg {...common}><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" fill={color} stroke="none"/></svg>;
+    case 'pill': return <svg {...common}><path d="M10.5 20.5a4.95 4.95 0 0 1-7-7l10-10a4.95 4.95 0 0 1 7 7z"/><line x1="8.5" y1="8.5" x2="15.5" y2="15.5"/></svg>;
+    case 'microscope': return <svg {...common}><path d="M6 18h8"/><path d="M3 22h18"/><path d="M14 22a7 7 0 1 0 0-14h-1"/><path d="M9 14h.01"/><path d="M8 8 6 6"/><path d="M9 18a4 4 0 0 1-4-4V8a2 2 0 0 1 2-2h2"/></svg>;
+    case 'flask': return <svg {...common}><path d="M9 3h6v5l4 9a2 2 0 0 1-1.8 2.9H6.8A2 2 0 0 1 5 17l4-9V3z"/><line x1="9" y1="3" x2="15" y2="3"/></svg>;
+    case 'hospital': return <svg {...common}><path d="M3 21h18"/><path d="M5 21V7l7-4 7 4v14"/><path d="M12 9v6"/><path d="M9 12h6"/></svg>;
+    case 'home': return <svg {...common}><path d="M3 9.5 12 3l9 6.5V20a2 2 0 0 1-2 2h-4v-7h-6v7H5a2 2 0 0 1-2-2z"/></svg>;
+    case 'book': return <svg {...common}><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>;
+    case 'refresh': return <svg {...common}><path d="M21 12a9 9 0 1 1-3-6.7L21 8"/><polyline points="21 3 21 8 16 8"/></svg>;
+    case 'user': return <svg {...common}><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>;
+    case 'wave': return <svg {...common}><path d="M18 11V6a2 2 0 1 0-4 0v5"/><path d="M14 10V4a2 2 0 1 0-4 0v6"/><path d="M10 10V6a2 2 0 1 0-4 0v8"/><path d="M18 8a2 2 0 1 1 4 0v6a8 8 0 0 1-8 8h-2c-2.8 0-4.5-1.4-5.5-2.6L3 17"/></svg>;
+    case 'flame': return <svg {...common}><path d="M8.5 14.5A2.5 2.5 0 0 0 11 17c1.4 0 2.5-1 2.5-2.4 0-1.7-2-2.6-1-5.6 0 0 4 .5 4 5.4a6 6 0 1 1-12 0c0-2 1-3.5 2-4.5C7.6 7 7 5 8 3c1 .5 3 1.5 3 4 0 2-1 3.5-2 4.5"/></svg>;
+    case 'target': return <svg {...common}><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1.5" fill={color}/></svg>;
+    case 'chart': return <svg {...common}><path d="M3 3v18h18"/><rect x="7" y="12" width="3" height="6"/><rect x="12" y="8" width="3" height="10"/><rect x="17" y="4" width="3" height="14"/></svg>;
+    case 'search': return <svg {...common}><circle cx="11" cy="11" r="7"/><line x1="20" y1="20" x2="16.6" y2="16.6"/></svg>;
+    case 'lightbulb': return <svg {...common}><path d="M9 18h6"/><path d="M10 22h4"/><path d="M12 2a7 7 0 0 0-4 12.7c.7.6 1 1.3 1 2.3v1h6v-1c0-1 .3-1.7 1-2.3A7 7 0 0 0 12 2z"/></svg>;
+    case 'lung': return <svg {...common}><path d="M12 4v10"/><path d="M6 21c-2 0-3-1.5-3-4V10c0-2 3-4 4-1l2 10c0 1-1 2-3 2z"/><path d="M18 21c2 0 3-1.5 3-4V10c0-2-3-4-4-1l-2 10c0 1 1 2 3 2z"/></svg>;
+    case 'check': return <svg {...common}><polyline points="20 6 9 17 4 12"/></svg>;
+    case 'x': return <svg {...common}><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>;
+    case 'check-circle': return <svg {...common}><circle cx="12" cy="12" r="9"/><polyline points="8.5 12 11 14.5 16 9.5"/></svg>;
+    case 'x-circle': return <svg {...common}><circle cx="12" cy="12" r="9"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>;
+    case 'bell': return <svg {...common}><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/></svg>;
+    case 'moon': return <svg {...common}><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>;
+    case 'download': return <svg {...common}><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>;
+    case 'help': return <svg {...common}><circle cx="12" cy="12" r="9"/><path d="M9.5 9a2.5 2.5 0 1 1 3.5 2.3c-.7.4-1 1-1 1.7v.5"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>;
+    case 'edit': return <svg {...common}><path d="M11 4H5a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2h13a2 2 0 0 0 2-2v-6"/><path d="M18.5 2.5a2.12 2.12 0 0 1 3 3L12 15l-4 1 1-4z"/></svg>;
+    case 'settings': return <svg {...common}><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 0 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 0 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 0 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 0 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>;
+    case 'edit-square': return <svg {...common}><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4z"/></svg>;
+    case 'star': return <svg {...common}><polygon points="12 2 15 9 22 9.3 16.5 14 18.5 21 12 17 5.5 21 7.5 14 2 9.3 9 9 12 2"/></svg>;
+    case 'gem': return <svg {...common}><path d="M6 3h12l4 6-10 13L2 9z"/><path d="M11 3 8 9l4 13 4-13-3-6"/><path d="M2 9h20"/></svg>;
+    case 'lock': return <svg {...common}><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>;
+    case 'bookmark': return <svg {...common} fill={color}><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z" stroke="none"/></svg>;
+    case 'party': return <svg {...common}><path d="M5.8 11.3 2 22l10.7-3.8"/><path d="M4 3h.01"/><path d="M22 8h.01"/><path d="M15 2h.01"/><path d="M22 20h.01"/><path d="M22 2 12 12"/><path d="M16.5 7.5 19 5"/><path d="m11.5 11.5 1 1"/><path d="m13.5 13.5 1 1"/></svg>;
+    case 'thumbs-up': return <svg {...common}><path d="M7 10v12"/><path d="M15 5.9 14 10h5.5a2 2 0 0 1 2 2.3l-1.4 8.5a2 2 0 0 1-2 1.7H7a3 3 0 0 1-3-3v-7a3 3 0 0 1 3-3h2.7a2 2 0 0 0 1.8-1.1l2.5-5a1.5 1.5 0 0 1 2 .5z"/></svg>;
+    case 'flex': return <svg {...common}><path d="M17.5 21H7a2 2 0 0 1-2-2v-3l3-7c.4-1 1.4-1.5 2.4-1.2l5 1.5"/><circle cx="18" cy="5" r="3"/><path d="M15 8 9 14"/></svg>;
+    case 'medal': return <svg {...common}><path d="M7.2 8.5 4 2h6l3 5"/><path d="M16.8 8.5 20 2h-6l-3 5"/><circle cx="12" cy="15" r="6"/><circle cx="12" cy="15" r="2"/></svg>;
+    case 'cap': return <svg {...common}><path d="M22 10 12 5 2 10l10 5 10-5z"/><path d="M6 12v5c3 3 9 3 12 0v-5"/></svg>;
+    case 'pencil': return <svg {...common}><path d="M12 19l7-7 3 3-7 7-3-3z"/><path d="M18 13l-1.5-7.5L2 2l3.5 14.5L13 18z"/><path d="m2 2 7.6 7.6"/><circle cx="11" cy="11" r="2"/></svg>;
+    default: return null;
+  }
+}
+
+
+
+
+
+
+const TWEAK_DEFAULTS = /*EDITMODE-BEGIN*/{
+  "theme": "blue",
+  "variant": "A",
+  "qtype": "mcq"
+}/*EDITMODE-END*/;
+
+// ─── Theme tokens ───────────────────────────────────────────
+const THEMES = {
+  blue: { primary: '#2563EB', light: '#EFF6FF', mid: '#BFDBFE', dark: '#1E40AF', accent: '#10B981' },
+  teal: { primary: '#0D9488', light: '#F0FDFA', mid: '#99F6E4', dark: '#0F766E', accent: '#F59E0B' },
+  violet: { primary: '#7C3AED', light: '#F5F3FF', mid: '#DDD6FE', dark: '#5B21B6', accent: '#EC4899' }
+};
+
+// ─── Quiz data ───────────────────────────────────────────────
+const QUIZ_DATA = {
+  mcq: {
+    subject: '解剖学',
+    question: '心臓の左心室から血液が送り出される血管はどれか？',
+    options: ['大動脈', '肺動脈', '大静脈', '肺静脈'],
+    answer: 0,
+    explanation: '左心室から体循環へ血液を送り出す血管は大動脈です。肺動脈は右心室から出ます。'
+  },
+  tf: {
+    subject: '生理学',
+    question: '赤血球には核が存在する。',
+    options: ['○ 正しい', '× 誤り'],
+    answer: 1,
+    explanation: '成熟した赤血球には核がありません。分化の過程で脱核します。'
+  },
+  fill: {
+    subject: '薬理学',
+    question: 'アセチルコリンを分解する酵素は【　　　】である。',
+    blank: 'アセチルコリンエステラーゼ',
+    explanation: 'アセチルコリンエステラーゼがシナプス間隙でACh を加水分解します。'
+  },
+  image: {
+    subject: '解剖学',
+    question: '図中の矢印が示す臓器はどれか？',
+    options: ['肝臓', '膵臓', '脾臓', '腎臓'],
+    answer: 2,
+    explanation: '矢印は左季肋部に位置する脾臓を示しています。'
+  }
+};
+
+const SUBJECTS = [
+{ name: '解剖学', icon: 'heart', iconColor: '#DC2626', count: 128, color: '#EFF6FF', iconBg: '#BFDBFE' },
+{ name: '生理学', icon: 'bolt', iconColor: '#10B981', count: 96, color: '#F0FDF4', iconBg: '#BBF7D0' },
+{ name: '薬理学', icon: 'pill', iconColor: '#EA580C', count: 84, color: '#FFF7ED', iconBg: '#FED7AA' },
+{ name: '病理学', icon: 'microscope', iconColor: '#7C3AED', count: 72, color: '#FDF4FF', iconBg: '#E9D5FF' }];
+
+
+// ─── Global state (outside React for tweaks bridge) ─────────
+let g_theme = TWEAK_DEFAULTS.theme;
+let g_variant = TWEAK_DEFAULTS.variant;
+let g_qtype = TWEAK_DEFAULTS.qtype;
+let g_setters = {};
+
+window.setTheme = (t) => {
+  g_theme = t;
+  document.querySelectorAll('[id^="theme-"]').forEach((b) => b.classList.remove('active'));
+  document.getElementById('theme-' + t)?.classList.add('active');
+  g_setters.theme?.(t);
+  postEdit({ theme: t });
+};
+window.setVariant = (v) => {
+  g_variant = v;
+  document.querySelectorAll('[id^="var-"]').forEach((b) => b.classList.remove('active'));
+  document.getElementById('var-' + v)?.classList.add('active');
+  g_setters.variant?.(v);
+  postEdit({ variant: v });
+};
+window.setQType = (q) => {
+  g_qtype = q;
+  document.querySelectorAll('[id^="qt-"]').forEach((b) => b.classList.remove('active'));
+  document.getElementById('qt-' + q)?.classList.add('active');
+  g_setters.qtype?.(q);
+  postEdit({ qtype: q });
+};
+function postEdit(edits) {
+  window.parent.postMessage({ type: '__edit_mode_set_keys', edits }, '*');
+}
+
+// ─── Shared UI primitives ────────────────────────────────────
+function XPBar({ xp, maxXp, theme }) {
+  const pct = Math.min(100, xp / maxXp * 100);
+  return (
+    <div style={{ background: theme.mid, borderRadius: 99, height: 8, overflow: 'hidden' }}>
+      <div style={{
+        width: pct + '%', height: '100%',
+        background: `linear-gradient(90deg, ${theme.primary}, ${theme.accent})`,
+        borderRadius: 99, transition: 'width .6s ease'
+      }} />
+    </div>);
+
+}
+
+function Badge({ label, color, bg }) {
+  return (
+    <span style={{
+      fontSize: 11, fontWeight: 700, color, background: bg,
+      padding: '3px 8px', borderRadius: 20, letterSpacing: 0.3
+    }}>{label}</span>);
+
+}
+
+// Shared bottom tab bar — always visible except on quiz screen
+function TabBar({ current, onNavigate, isDark, theme }) {
+  const items = [
+    { icon: 'home', label: 'ホーム', screen: 'home' },
+    { icon: 'book', label: 'コース', screen: 'courses' },
+    { icon: 'refresh', label: '復習', screen: 'review' },
+    { icon: 'user', label: 'マイページ', screen: 'profile' }
+  ];
+  return (
+    <div style={{
+      position: 'absolute', bottom: 24, left: 16, right: 16,
+      borderRadius: 999, padding: '8px',
+      display: 'flex', alignItems: 'stretch',
+      background: isDark ? 'rgba(30, 41, 59, 0.55)' : 'rgba(255, 255, 255, 0.75)',
+      backdropFilter: 'blur(20px) saturate(180%)',
+      WebkitBackdropFilter: 'blur(20px) saturate(180%)',
+      border: isDark ? '1px solid rgba(255,255,255,0.12)' : '1px solid rgba(255,255,255,0.6)',
+      boxShadow: isDark ?
+        '0 8px 28px rgba(0,0,0,0.45), inset 0 1px 0 rgba(255,255,255,0.08)' :
+        '0 8px 28px rgba(0,0,0,0.12), inset 0 1px 0 rgba(255,255,255,0.8)',
+      zIndex: 10
+    }}>
+      {items.map(({ icon, label, screen: tgt }) => {
+        const active = tgt === current;
+        return (
+          <div key={label} onClick={() => !active && onNavigate(tgt)} style={{
+            flex: 1,
+            display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+            gap: 2, padding: '6px 4px', borderRadius: 999,
+            background: active ? 'rgba(255,255,255,0.95)' : 'transparent',
+            boxShadow: active ? '0 2px 8px rgba(0,0,0,0.08)' : 'none',
+            transition: 'all .25s ease', cursor: active ? 'default' : 'pointer'
+          }}>
+            <Icon name={icon} size={20} color={active ? theme.primary : (isDark ? 'rgba(255,255,255,0.75)' : '#475569')} strokeWidth={active ? 2.4 : 2} />
+            <span style={{
+              fontSize: 10, fontWeight: active ? 700 : 500,
+              color: active ? theme.primary : isDark ? 'rgba(255,255,255,0.75)' : '#475569',
+              whiteSpace: 'nowrap', letterSpacing: 0.2
+            }}>{label}</span>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+// ─── Screen A: HOME ──────────────────────────────────────────
+function HomeScreen({ theme, variant, onNavigate }) {
+  const isDark = variant === 'C';
+  const bg = isDark ? '#0F172A' : variant === 'B' ? theme.light : '#F8FAFF';
+  const cardBg = isDark ? '#1E293B' : 'white';
+  const textPrimary = isDark ? '#F1F5F9' : '#111827';
+  const textSec = isDark ? '#94A3B8' : '#6B7280';
+  const borderCol = isDark ? '#334155' : '#E5E7EB';
+
+  const xp = 340;const maxXp = 500;const level = 7;const streak = 5;
+
+  return (
+    <div style={{ background: bg, minHeight: '100%', paddingBottom: 100 }}>
+      {/* Header hero */}
+      <div style={{
+        background: variant === 'A' ?
+        `linear-gradient(135deg, ${theme.primary} 0%, ${theme.dark} 100%)` :
+        variant === 'B' ?
+        `linear-gradient(135deg, ${theme.primary} 0%, ${theme.accent} 100%)` :
+        `linear-gradient(135deg, #1E293B 0%, #0F172A 100%)`,
+        padding: '68px 20px 28px',
+        position: 'relative', overflow: 'hidden', borderRadius: "0px", height: "260.688px", margin: "0px", color: "rgb(102, 190, 200)"
+      }}>
+        <div style={{ position: 'absolute', top: -30, right: -20, width: 150, height: 150, borderRadius: '50%', background: 'rgba(255,255,255,0.06)' }} />
+        <div style={{ position: 'absolute', bottom: -40, left: -10, width: 120, height: 120, borderRadius: '50%', background: 'rgba(255,255,255,0.04)' }} />
+        <div style={{ position: 'relative' }}>
+          <p style={{ color: 'rgba(255,255,255,0.75)', fontSize: 13, fontWeight: 500, marginBottom: 4, display: 'flex', alignItems: 'center', gap: 6 }}>おはようございます<Icon name="wave" size={14} color="rgba(255,255,255,0.85)" /></p>
+          <h2 style={{ color: 'white', fontSize: 22, fontWeight: 800, marginBottom: 16, lineHeight: 1.3 }}>今日も学習を<br />続けましょう！</h2>
+          {/* Level + XP */}
+          <div style={{ background: 'rgba(255,255,255,0.12)', borderRadius: 16, padding: '12px 16px', backdropFilter: 'blur(8px)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <div style={{ background: theme.accent, borderRadius: 10, width: 28, height: 28, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <span style={{ fontSize: 13, fontWeight: 800, color: 'white' }}>{level}</span>
+                </div>
+                <span style={{ color: 'white', fontSize: 14, fontWeight: 700 }}>Lv.{level} インターン</span>
+              </div>
+              <span style={{ color: 'rgba(255,255,255,0.7)', fontSize: 12 }}>{xp} / {maxXp} XP</span>
+            </div>
+            <XPBar xp={xp} maxXp={maxXp} theme={{ ...theme, mid: 'rgba(255,255,255,0.2)' }} />
+          </div>
+        </div>
+      </div>
+
+      <div style={{ borderRadius: "14px 14px 0 0", padding: "18px 16px 0", margin: "-12px 0 0", background: bg, position: "relative", zIndex: 1 }}>
+        {/* Stats row */}
+        <div style={{ display: 'flex', gap: 10, marginBottom: 20 }}>
+          {[
+          { label: '連続学習', value: `${streak}日`, icon: 'flame', iconColor: '#F59E0B' },
+          { label: '正解率', value: '78%', icon: 'target', iconColor: theme.primary },
+          { label: '今週', value: '42問', icon: 'chart', iconColor: '#8B5CF6' }].
+          map((s) =>
+          <div key={s.label} style={{
+            flex: 1, background: cardBg, borderRadius: 14, padding: '12px 10px',
+            textAlign: 'center', border: `1px solid ${borderCol}`,
+            boxShadow: isDark ? 'none' : '0 1px 4px rgba(0,0,0,0.05)'
+          }}>
+              <div style={{ marginBottom: 4, display: 'flex', justifyContent: 'center' }}><Icon name={s.icon} size={18} color={s.iconColor} /></div>
+              <div style={{ fontSize: 16, fontWeight: 800, color: textPrimary }}>{s.value}</div>
+              <div style={{ fontSize: 10, color: textSec, fontWeight: 500 }}>{s.label}</div>
+            </div>
+          )}
+        </div>
+
+        {/* Daily challenge */}
+        <div style={{
+          background: isDark ? '#1E293B' : `linear-gradient(135deg, ${theme.light} 0%, white 100%)`,
+          border: `1.5px solid ${theme.mid}`,
+          borderRadius: 18, padding: '16px', marginBottom: 20,
+          boxShadow: isDark ? 'none' : `0 2px 12px ${theme.mid}`
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <Icon name="bolt" size={18} color={theme.primary} />
+              <span style={{ fontSize: 14, fontWeight: 700, color: textPrimary }}>デイリーチャレンジ</span>
+            </div>
+            <Badge label="+5 XP" color={theme.dark} bg={theme.mid} />
+          </div>
+          <p style={{ fontSize: 13, color: textSec, marginBottom: 14, lineHeight: 1.5 }}>本日のテーマ：循環器系の解剖学<br />10問に挑戦して報酬を獲得しよう！</p>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
+            <div style={{ flex: 1, background: isDark ? '#334155' : theme.mid, borderRadius: 99, height: 6, overflow: 'hidden' }}>
+              <div style={{ width: '30%', height: '100%', background: theme.primary, borderRadius: 99 }} />
+            </div>
+            <span style={{ fontSize: 11, color: textSec, fontWeight: 500, whiteSpace: 'nowrap' }}>3 / 10 問</span>
+          </div>
+          <button onClick={() => onNavigate('quiz')} style={{
+            width: '100%', background: theme.primary, color: 'white',
+            border: 'none', borderRadius: 12, padding: '13px', fontSize: 14,
+            fontWeight: 700, fontFamily: 'Noto Sans JP', cursor: 'pointer',
+            boxShadow: `0 4px 12px ${theme.primary}55`
+          }}>続きを解く →</button>
+        </div>
+
+        {/* Recent / Continue section (replaces subjects) */}
+        <div style={{ marginBottom: 16 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+            <span style={{ fontSize: 15, fontWeight: 700, color: textPrimary }}>続きから学習</span>
+            <span onClick={() => onNavigate('courses')} style={{ fontSize: 12, color: theme.primary, fontWeight: 600, cursor: 'pointer' }}>コース一覧 →</span>
+          </div>
+          <button onClick={() => onNavigate('quiz')} style={{
+            width: '100%', background: cardBg, border: `1px solid ${borderCol}`,
+            borderRadius: 16, padding: '14px', textAlign: 'left', cursor: 'pointer',
+            fontFamily: 'Noto Sans JP', boxShadow: isDark ? 'none' : '0 1px 4px rgba(0,0,0,0.05)',
+            display: 'flex', alignItems: 'center', gap: 12
+          }}>
+            <div style={{
+              width: 44, height: 44, borderRadius: 12,
+              background: isDark ? '#334155' : SUBJECTS[0].iconBg,
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              fontSize: 22, flexShrink: 0
+            }}><Icon name={SUBJECTS[0].icon} size={22} color={SUBJECTS[0].iconColor} /></div>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ fontSize: 13, fontWeight: 700, color: textPrimary, marginBottom: 3 }}>{SUBJECTS[0].name} ・ 循環器系</div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <div style={{ flex: 1, background: isDark ? '#334155' : theme.mid, borderRadius: 99, height: 5, overflow: 'hidden' }}>
+                  <div style={{ width: '45%', height: '100%', background: theme.primary, borderRadius: 99 }} />
+                </div>
+                <span style={{ fontSize: 10, color: textSec, fontWeight: 500, whiteSpace: 'nowrap' }}>58 / 128</span>
+              </div>
+            </div>
+            <span style={{ fontSize: 18, color: textSec }}>›</span>
+          </button>
+        </div>
+      </div>
+
+      
+    </div>);
+
+}
+
+// ─── Screen A2: COURSES ──────────────────────────────────────
+function CoursesScreen({ theme, variant, onNavigate }) {
+  const [activeTab, setActiveTab] = React.useState('all');
+  const isDark = variant === 'C';
+  const bg = isDark ? '#0F172A' : '#F8FAFF';
+  const cardBg = isDark ? '#1E293B' : 'white';
+  const textPrimary = isDark ? '#F1F5F9' : '#111827';
+  const textSec = isDark ? '#94A3B8' : '#6B7280';
+  const borderCol = isDark ? '#334155' : '#E5E7EB';
+
+  const extendedSubjects = [
+  { ...SUBJECTS[0], progress: 45, lastStudied: '今日', difficulty: '基礎〜応用' },
+  { ...SUBJECTS[1], progress: 62, lastStudied: '昨日', difficulty: '基礎〜応用' },
+  { ...SUBJECTS[2], progress: 18, lastStudied: '3日前', difficulty: '基礎' },
+  { ...SUBJECTS[3], progress: 0, lastStudied: '未着手', difficulty: '応用' },
+  { name: '微生物学', icon: 'flask', iconColor: '#EC4899', count: 56, iconBg: '#FEE2E2', progress: 30, lastStudied: '1週間前', difficulty: '基礎' },
+  { name: '公衆衛生', icon: 'hospital', iconColor: '#0284C7', count: 44, iconBg: '#E0F2FE', progress: 0, lastStudied: '未着手', difficulty: '基礎' }];
+
+
+  const tabs = [
+  { id: 'all', label: 'すべて' },
+  { id: 'inprogress', label: '学習中' },
+  { id: 'new', label: '未着手' }];
+
+
+  const filtered = extendedSubjects.filter((s) => {
+    if (activeTab === 'inprogress') return s.progress > 0 && s.progress < 100;
+    if (activeTab === 'new') return s.progress === 0;
+    return true;
+  });
+
+  return (
+    <div style={{ background: bg, minHeight: '100%', paddingBottom: 100 }}>
+      {/* Header */}
+      <div style={{
+        background: variant === 'C' ?
+        'linear-gradient(135deg, #1E293B 0%, #0F172A 100%)' :
+        `linear-gradient(135deg, ${theme.primary} 0%, ${theme.dark} 100%)`,
+        padding: '64px 20px 28px', position: 'relative', overflow: 'hidden'
+      }}>
+        <div style={{ position: 'absolute', top: -40, right: -30, width: 160, height: 160, borderRadius: '50%', background: 'rgba(255,255,255,0.06)' }} />
+        <div style={{ position: 'relative' }}>
+          <p style={{ color: 'rgba(255,255,255,0.75)', fontSize: 13, fontWeight: 500, marginBottom: 4, display: 'flex', alignItems: 'center', gap: 6 }}><Icon name="book" size={14} color="rgba(255,255,255,0.85)" />コース</p>
+          <h2 style={{ color: 'white', fontSize: 22, fontWeight: 800, marginBottom: 14, lineHeight: 1.3 }}>科目を選ぶ</h2>
+          {/* Search */}
+          <div style={{
+            background: 'rgba(255,255,255,0.15)', borderRadius: 12, padding: '10px 14px',
+            display: 'flex', alignItems: 'center', gap: 10, backdropFilter: 'blur(8px)'
+          }}>
+            <Icon name="search" size={14} color="rgba(255,255,255,0.7)" />
+            <span style={{ fontSize: 13, color: 'rgba(255,255,255,0.7)' }}>科目・単元を検索...</span>
+          </div>
+        </div>
+      </div>
+
+      {/* Content panel */}
+      <div style={{ borderRadius: "14px 14px 0 0", margin: "-12px 0 0", background: bg, position: "relative", zIndex: 1, paddingTop: 6 }}>
+      {/* Filter tabs */}
+      <div style={{ padding: '16px 16px 8px', display: 'flex', gap: 8, overflowX: 'auto' }}>
+        {tabs.map((t) =>
+        <button key={t.id} onClick={() => setActiveTab(t.id)} style={{
+          padding: '8px 16px', borderRadius: 99,
+          border: `1.5px solid ${activeTab === t.id ? theme.primary : borderCol}`,
+          background: activeTab === t.id ? theme.primary : cardBg,
+          color: activeTab === t.id ? 'white' : textSec,
+          fontSize: 12, fontWeight: 600, fontFamily: 'Noto Sans JP',
+          cursor: 'pointer', whiteSpace: 'nowrap', flexShrink: 0
+        }}>{t.label}</button>
+        )}
+      </div>
+
+      {/* Subject cards */}
+      <div style={{ padding: '8px 16px 0' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+          {filtered.map((sub) =>
+          <button key={sub.name} onClick={() => onNavigate(sub.name === '解剖学' ? 'anatomyUnits' : 'quiz')} style={{
+            background: cardBg, border: `1px solid ${borderCol}`,
+            borderRadius: 16, padding: '14px 12px', textAlign: 'left', cursor: 'pointer',
+            fontFamily: 'Noto Sans JP', boxShadow: isDark ? 'none' : '0 1px 4px rgba(0,0,0,0.05)',
+            display: 'flex', flexDirection: 'column', gap: 8
+          }}>
+              <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between' }}>
+                <div style={{
+                width: 40, height: 40, borderRadius: 12,
+                background: isDark ? '#334155' : sub.iconBg,
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+              }}><Icon name={sub.icon} size={20} color={sub.iconColor || theme.primary} /></div>
+                {sub.progress > 0 &&
+              <span style={{ fontSize: 10, fontWeight: 700, color: theme.primary }}>{sub.progress}%</span>
+              }
+              </div>
+              <div>
+                <div style={{ fontSize: 13, fontWeight: 700, color: textPrimary, marginBottom: 2 }}>{sub.name}</div>
+                <div style={{ fontSize: 10, color: textSec, marginBottom: 6 }}>{sub.count}問 ・ {sub.difficulty}</div>
+                <div style={{ background: isDark ? '#334155' : '#F1F5F9', borderRadius: 99, height: 4, overflow: 'hidden' }}>
+                  <div style={{
+                  width: `${sub.progress}%`, height: '100%',
+                  background: sub.progress === 0 ? 'transparent' :
+                  `linear-gradient(90deg, ${theme.primary}, ${theme.accent})`,
+                  borderRadius: 99
+                }} />
+                </div>
+                <div style={{ fontSize: 9, color: textSec, marginTop: 5, fontWeight: 500 }}>最終学習: {sub.lastStudied}</div>
+              </div>
+            </button>
+          )}
+        </div>
+      </div>
+      </div>
+
+      
+    </div>);
+
+}
+
+// ─── Screen B: QUIZ ──────────────────────────────────────────
+function QuizScreen({ theme, variant, qtype, onNavigate }) {
+  const [selected, setSelected] = React.useState(null);
+  const [fillInput, setFillInput] = React.useState('');
+  const [revealed, setRevealed] = React.useState(false);
+
+  const isDark = variant === 'C';
+  const bg = isDark ? '#0F172A' : '#F8FAFF';
+  const cardBg = isDark ? '#1E293B' : 'white';
+  const textPrimary = isDark ? '#F1F5F9' : '#111827';
+  const textSec = isDark ? '#94A3B8' : '#6B7280';
+  const borderCol = isDark ? '#334155' : '#E5E7EB';
+
+  const data = QUIZ_DATA[qtype];
+  const questionNum = 4;const totalQ = 10;
+  const progressPct = (questionNum - 1) / totalQ * 100;
+
+  const handleSelect = (i) => {
+    if (revealed) return;
+    setSelected(i);
+    setRevealed(true);
+  };
+  const handleFill = () => {
+    if (!fillInput.trim()) return;
+    setRevealed(true);
+  };
+  const handleNext = () => {
+    setSelected(null);
+    setFillInput('');
+    setRevealed(false);
+    onNavigate('result');
+  };
+
+  const isCorrect = (i) => {
+    if (qtype === 'fill') return fillInput.trim() === data.blank;
+    return i === data.answer;
+  };
+
+  return (
+    <div style={{ background: bg, minHeight: '100%', display: 'flex', flexDirection: 'column' }}>
+      {/* Header */}
+      <div style={{ padding: '64px 16px 16px', background: isDark ? '#1E293B' : 'white', borderBottom: `1px solid ${borderCol}` }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+          <button onClick={() => onNavigate('home')} style={{ background: 'none', border: 'none', cursor: 'pointer', color: textSec, fontSize: 14, fontFamily: 'Noto Sans JP' }}>← 終了</button>
+          <Badge label={data.subject} color={theme.dark} bg={theme.mid} />
+          <span style={{ fontSize: 13, fontWeight: 600, color: textSec }}>{questionNum}/{totalQ}</span>
+        </div>
+        <div style={{ background: isDark ? '#334155' : theme.mid, borderRadius: 99, height: 6, overflow: 'hidden' }}>
+          <div style={{ width: progressPct + '%', height: '100%', background: theme.primary, borderRadius: 99, transition: 'width .4s' }} />
+        </div>
+      </div>
+
+      <div style={{ flex: 1, padding: '20px 16px', overflowY: 'auto' }}>
+        {/* Question card */}
+        <div style={{
+          background: cardBg, borderRadius: 20, padding: '20px',
+          border: `1px solid ${borderCol}`, marginBottom: 16,
+          boxShadow: isDark ? 'none' : '0 2px 12px rgba(0,0,0,0.06)'
+        }}>
+          {/* Question type badge */}
+          <div style={{ display: 'flex', gap: 6, marginBottom: 12 }}>
+            <Badge
+              label={qtype === 'mcq' ? '4択問題' : qtype === 'tf' ? '正誤問題' : qtype === 'fill' ? '穴埋め問題' : '画像問題'}
+              color={theme.primary} bg={theme.light} />
+            
+            <Badge label="難易度：普通" color="#92400E" bg="#FEF3C7" />
+          </div>
+
+          {/* Image question placeholder */}
+          {qtype === 'image' &&
+          <div style={{
+            background: isDark ? '#334155' : '#F1F5F9',
+            borderRadius: 12, height: 140, marginBottom: 14,
+            display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+            border: `1.5px dashed ${borderCol}`
+          }}>
+              <Icon name="lung" size={32} color={isDark ? '#94A3B8' : '#64748B'} />
+              <span style={{ fontSize: 11, color: textSec, fontFamily: 'monospace', letterSpacing: 0.3, marginTop: 6 }}>腹部臓器 解剖図</span>
+            </div>
+          }
+
+          <p style={{ fontSize: 16, fontWeight: 700, color: textPrimary, lineHeight: 1.7 }}>
+            {data.question}
+          </p>
+        </div>
+
+        {/* Answer area */}
+        {qtype === 'fill' ?
+        <div style={{ marginBottom: 16 }}>
+            <input
+            value={fillInput}
+            onChange={(e) => setFillInput(e.target.value)}
+            disabled={revealed}
+            placeholder="答えを入力..."
+            style={{
+              width: '100%', padding: '14px 16px', borderRadius: 14,
+              border: revealed ?
+              `2px solid ${isCorrect() ? '#10B981' : '#EF4444'}` :
+              `1.5px solid ${borderCol}`,
+              background: cardBg, fontSize: 15, fontFamily: 'Noto Sans JP',
+              color: textPrimary, outline: 'none'
+            }} />
+          
+            {!revealed &&
+          <button onClick={handleFill} style={{
+            width: '100%', marginTop: 10, background: theme.primary, color: 'white',
+            border: 'none', borderRadius: 12, padding: '14px',
+            fontSize: 15, fontWeight: 700, fontFamily: 'Noto Sans JP', cursor: 'pointer'
+          }}>答え合わせ</button>
+          }
+            {revealed &&
+          <div style={{ marginTop: 10, padding: '12px 14px', background: isCorrect() ? '#ECFDF5' : '#FEF2F2', borderRadius: 12, border: `1px solid ${isCorrect() ? '#A7F3D0' : '#FECACA'}` }}>
+                <span style={{ fontSize: 13, fontWeight: 700, color: isCorrect() ? '#065F46' : '#991B1B', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                  {isCorrect() ? <><Icon name="check-circle" size={14} color="#065F46" />正解！</> : <><Icon name="x-circle" size={14} color="#991B1B" />正解：{data.blank}</>}
+                </span>
+              </div>
+          }
+          </div> :
+
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 16 }}>
+            {data.options.map((opt, i) => {
+            const isSel = selected === i;
+            const correct = i === data.answer;
+            let optBg = cardBg,optBorder = borderCol,optText = textPrimary;
+            if (revealed && correct) {optBg = '#ECFDF5';optBorder = '#10B981';optText = '#065F46';} else
+            if (revealed && isSel && !correct) {optBg = '#FEF2F2';optBorder = '#EF4444';optText = '#991B1B';} else
+            if (isSel) {optBg = theme.light;optBorder = theme.primary;optText = theme.dark;}
+            return (
+              <button key={i} onClick={() => handleSelect(i)} style={{
+                background: optBg, border: `2px solid ${optBorder}`,
+                borderRadius: 14, padding: '14px 16px', textAlign: 'left',
+                cursor: revealed ? 'default' : 'pointer',
+                fontFamily: 'Noto Sans JP', transition: 'all .15s',
+                display: 'flex', alignItems: 'center', gap: 12
+              }}>
+                  <div style={{
+                  width: 28, height: 28, borderRadius: '50%',
+                  background: revealed && correct ? '#10B981' : revealed && isSel ? '#EF4444' : isSel ? theme.primary : isDark ? '#334155' : '#F1F5F9',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  flexShrink: 0, fontSize: 13, fontWeight: 700,
+                  color: isSel || revealed && correct ? 'white' : textSec
+                }}>
+                    {revealed && correct ? '✓' : revealed && isSel && !correct ? '✗' : 'ABCD'[i]}
+                  </div>
+                  <span style={{ fontSize: 14, fontWeight: 500, color: optText, lineHeight: 1.4 }}>{opt}</span>
+                </button>);
+
+          })}
+          </div>
+        }
+
+        {/* Explanation */}
+        {revealed &&
+        <div style={{
+          background: isDark ? '#1E293B' : theme.light,
+          border: `1px solid ${theme.mid}`,
+          borderRadius: 16, padding: '14px 16px', marginBottom: 16
+        }}>
+            <div style={{ fontSize: 13, fontWeight: 700, color: theme.primary, marginBottom: 6, display: 'flex', alignItems: 'center', gap: 6 }}><Icon name="lightbulb" size={14} color={theme.primary} />解説</div>
+            <p style={{ fontSize: 13, color: textSec, lineHeight: 1.7 }}>{data.explanation}</p>
+          </div>
+        }
+      </div>
+
+      {/* Next button */}
+      {revealed &&
+      <div style={{ padding: '12px 16px 28px', background: isDark ? '#1E293B' : 'white', borderTop: `1px solid ${borderCol}` }}>
+          <button onClick={handleNext} style={{
+          width: '100%', background: theme.primary, color: 'white',
+          border: 'none', borderRadius: 14, padding: '15px',
+          fontSize: 16, fontWeight: 700, fontFamily: 'Noto Sans JP', cursor: 'pointer',
+          boxShadow: `0 4px 14px ${theme.primary}55`
+        }}>次の問題へ →</button>
+        </div>
+      }
+    </div>);
+
+}
+
+// ─── Screen R: REVIEW ────────────────────────────────────────
+function ReviewScreen({ theme, variant, onNavigate }) {
+  const [activeTab, setActiveTab] = React.useState('due');
+  const isDark = variant === 'C';
+  const bg = isDark ? '#0F172A' : '#F8FAFF';
+  const cardBg = isDark ? '#1E293B' : 'white';
+  const textPrimary = isDark ? '#F1F5F9' : '#111827';
+  const textSec = isDark ? '#94A3B8' : '#6B7280';
+  const borderCol = isDark ? '#334155' : '#E5E7EB';
+
+  const dueToday = 18;
+  const mastered = 142;
+  const learning = 47;
+
+  const weakAreas = [
+  { name: '循環器系', subject: '解剖学', accuracy: 52, count: 12, icon: 'heart', iconColor: '#DC2626', color: '#FEE2E2' },
+  { name: '内分泌', subject: '生理学', accuracy: 61, count: 8, icon: 'bolt', iconColor: '#10B981', color: '#FEF3C7' },
+  { name: '抗菌薬', subject: '薬理学', accuracy: 68, count: 6, icon: 'pill', iconColor: '#EA580C', color: '#FFEDD5' }];
+
+
+  const dueCards = [
+  { q: '心臓の左心室から血液が送り出される血管は？', subject: '解剖学', interval: '1日後', attempts: 2, lastWrong: true, icon: 'heart', iconColor: '#DC2626' },
+  { q: 'アセチルコリンを分解する酵素は？', subject: '薬理学', interval: '今日', attempts: 3, lastWrong: true, icon: 'pill', iconColor: '#EA580C' },
+  { q: '赤血球には核が存在する。', subject: '生理学', interval: '3日後', attempts: 1, lastWrong: false, icon: 'bolt', iconColor: '#10B981' },
+  { q: 'ネフロンの構成要素で血液濾過を行う部位は？', subject: '解剖学', interval: '今日', attempts: 4, lastWrong: true, icon: 'heart', iconColor: '#DC2626' },
+  { q: 'インスリンを分泌する細胞は？', subject: '生理学', interval: '今日', attempts: 2, lastWrong: false, icon: 'bolt', iconColor: '#10B981' }];
+
+
+  const bookmarks = [
+  { q: '交感神経と副交感神経の伝達物質の違い', subject: '生理学', date: '3日前', icon: 'bolt', iconColor: '#10B981' },
+  { q: 'β遮断薬の主な副作用', subject: '薬理学', date: '1週間前', icon: 'pill', iconColor: '#EA580C' },
+  { q: '炎症の5徴候とは', subject: '病理学', date: '2週間前', icon: 'microscope', iconColor: '#7C3AED' }];
+
+
+  const tabs = [
+  { id: 'due', label: `今日 ${dueToday}` },
+  { id: 'weak', label: '苦手分野' },
+  { id: 'bookmark', label: 'ブックマーク' }];
+
+
+  return (
+    <div style={{ background: bg, minHeight: '100%', paddingBottom: 100 }}>
+      {/* Header hero */}
+      <div style={{
+        background: variant === 'C' ?
+        'linear-gradient(135deg, #1E293B 0%, #0F172A 100%)' :
+        variant === 'B' ?
+        `linear-gradient(135deg, ${theme.primary} 0%, ${theme.accent} 100%)` :
+        `linear-gradient(135deg, ${theme.primary} 0%, ${theme.dark} 100%)`,
+        padding: '64px 20px 24px', position: 'relative', overflow: 'hidden'
+      }}>
+        <div style={{ position: 'absolute', top: -30, right: -30, width: 160, height: 160, borderRadius: '50%', background: 'rgba(255,255,255,0.06)' }} />
+        <div style={{ position: 'absolute', bottom: -50, left: -20, width: 140, height: 140, borderRadius: '50%', background: 'rgba(255,255,255,0.04)' }} />
+        <div style={{ position: 'relative' }}>
+          <p style={{ color: 'rgba(255,255,255,0.75)', fontSize: 13, fontWeight: 500, marginBottom: 4, display: 'flex', alignItems: 'center', gap: 6 }}><Icon name="refresh" size={14} color="rgba(255,255,255,0.85)" />復習</p>
+          <h2 style={{ color: 'white', fontSize: 22, fontWeight: 800, marginBottom: 16, lineHeight: 1.3 }}>忘れる前に、もう一度</h2>
+
+          {/* Review stats */}
+          <div style={{
+            background: 'rgba(255,255,255,0.12)', borderRadius: 16, padding: '14px 16px',
+            backdropFilter: 'blur(8px)', display: 'flex', alignItems: 'center', justifyContent: 'space-between'
+          }}>
+            {[
+            { label: '今日の復習', value: dueToday, color: theme.accent },
+            { label: '学習中', value: learning, color: 'rgba(255,255,255,0.95)' },
+            { label: '習得済', value: mastered, color: 'rgba(255,255,255,0.95)' }].
+            map((s, i) =>
+            <React.Fragment key={s.label}>
+                <div style={{ textAlign: 'center', flex: 1 }}>
+                  <div style={{ fontSize: 22, fontWeight: 800, color: s.color, lineHeight: 1 }}>{s.value}</div>
+                  <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.7)', fontWeight: 500, marginTop: 4 }}>{s.label}</div>
+                </div>
+                {i < 2 && <div style={{ width: 1, height: 28, background: 'rgba(255,255,255,0.18)' }} />}
+              </React.Fragment>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Content panel */}
+      <div style={{ borderRadius: "14px 14px 0 0", margin: "-12px 0 0", background: bg, position: "relative", zIndex: 1, paddingTop: 6 }}>
+      {/* Quick start "復習する" CTA */}
+      <div style={{ padding: '16px 16px 0' }}>
+        <button onClick={() => onNavigate('quiz')} style={{
+          width: '100%', background: cardBg,
+          border: `1.5px solid ${theme.mid}`,
+          borderRadius: 18, padding: '14px 16px', cursor: 'pointer',
+          fontFamily: 'Noto Sans JP', display: 'flex', alignItems: 'center', gap: 14,
+          boxShadow: isDark ? 'none' : `0 2px 12px ${theme.mid}`
+        }}>
+          <div style={{
+            width: 48, height: 48, borderRadius: 14,
+            background: `linear-gradient(135deg, ${theme.primary}, ${theme.accent})`,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            fontSize: 24, flexShrink: 0
+          }}><Icon name="target" size={26} color="white" strokeWidth={2.4} /></div>
+          <div style={{ flex: 1, textAlign: 'left' }}>
+            <div style={{ fontSize: 14, fontWeight: 700, color: textPrimary, marginBottom: 2 }}>今すぐ復習を始める</div>
+            <div style={{ fontSize: 11, color: textSec }}>{dueToday}問 ・ 約 {Math.ceil(dueToday * 0.7)}分</div>
+          </div>
+          <div style={{
+            background: theme.primary, color: 'white',
+            borderRadius: 99, padding: '8px 14px',
+            fontSize: 12, fontWeight: 700
+          }}>開始 →</div>
+        </button>
+      </div>
+
+      {/* Tabs */}
+      <div style={{ padding: '16px 16px 4px', display: 'flex', gap: 8, overflowX: 'auto' }}>
+        {tabs.map((t) =>
+        <button key={t.id} onClick={() => setActiveTab(t.id)} style={{
+          padding: '8px 16px', borderRadius: 99,
+          border: `1.5px solid ${activeTab === t.id ? theme.primary : borderCol}`,
+          background: activeTab === t.id ? theme.primary : cardBg,
+          color: activeTab === t.id ? 'white' : textSec,
+          fontSize: 12, fontWeight: 600, fontFamily: 'Noto Sans JP',
+          cursor: 'pointer', whiteSpace: 'nowrap', flexShrink: 0
+        }}>{t.label}</button>
+        )}
+      </div>
+
+      {/* Tab content */}
+      <div style={{ padding: '8px 16px 0' }}>
+        {activeTab === 'due' &&
+        <>
+            <div style={{ fontSize: 11, color: textSec, fontWeight: 500, marginBottom: 8, padding: '6px 2px' }}>
+              間隔反復スケジュール ・ {dueCards.length}件
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              {dueCards.map((c, i) =>
+            <button key={i} onClick={() => onNavigate('quiz')} style={{
+              background: cardBg, border: `1px solid ${borderCol}`,
+              borderRadius: 14, padding: '12px 14px', textAlign: 'left',
+              cursor: 'pointer', fontFamily: 'Noto Sans JP',
+              boxShadow: isDark ? 'none' : '0 1px 4px rgba(0,0,0,0.04)',
+              display: 'flex', alignItems: 'flex-start', gap: 12
+            }}>
+                  <div style={{
+                width: 36, height: 36, borderRadius: 10,
+                background: isDark ? '#334155' : theme.light,
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                flexShrink: 0
+              }}><Icon name={c.icon} size={18} color={c.iconColor || theme.primary} /></div>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ display: 'flex', gap: 6, marginBottom: 6, alignItems: 'center' }}>
+                      <span style={{ fontSize: 10, fontWeight: 600, color: theme.primary }}>{c.subject}</span>
+                      <span style={{ fontSize: 10, color: textSec }}>・</span>
+                      <span style={{
+                    fontSize: 10, fontWeight: 600,
+                    color: c.interval === '今日' ? '#DC2626' : textSec
+                  }}>{c.interval === '今日' ? <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3 }}><Icon name="bell" size={11} color="#DC2626" />復習期限</span> : `次回: ${c.interval}`}</span>
+                      {c.lastWrong &&
+                  <span style={{
+                    fontSize: 9, fontWeight: 700, color: '#991B1B',
+                    background: '#FEE2E2', padding: '2px 6px', borderRadius: 20, marginLeft: 'auto'
+                  }}><span style={{ display: 'inline-flex', alignItems: 'center', gap: 2 }}>前回<Icon name="x" size={9} color="#991B1B" strokeWidth={3} /></span></span>
+                  }
+                    </div>
+                    <div style={{
+                  fontSize: 13, fontWeight: 500, color: textPrimary,
+                  lineHeight: 1.5, overflow: 'hidden',
+                  display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical'
+                }}>{c.q}</div>
+                    {/* Attempt dots */}
+                    <div style={{ display: 'flex', gap: 3, marginTop: 6, alignItems: 'center' }}>
+                      <span style={{ fontSize: 9, color: textSec, marginRight: 4 }}>挑戦</span>
+                      {[...Array(5)].map((_, j) =>
+                  <div key={j} style={{
+                    width: 6, height: 6, borderRadius: '50%',
+                    background: j < c.attempts ? theme.primary : isDark ? '#334155' : '#E5E7EB'
+                  }} />
+                  )}
+                    </div>
+                  </div>
+                </button>
+            )}
+            </div>
+          </>
+        }
+
+        {activeTab === 'weak' &&
+        <>
+            <div style={{ fontSize: 11, color: textSec, fontWeight: 500, marginBottom: 8, padding: '6px 2px' }}>
+              正解率が低い単元 ・ 集中的に復習
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+              {weakAreas.map((w) =>
+            <button key={w.name} onClick={() => onNavigate('quiz')} style={{
+              background: cardBg, border: `1px solid ${borderCol}`,
+              borderRadius: 16, padding: '14px', textAlign: 'left',
+              cursor: 'pointer', fontFamily: 'Noto Sans JP',
+              boxShadow: isDark ? 'none' : '0 1px 4px rgba(0,0,0,0.04)'
+            }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 10 }}>
+                    <div style={{
+                  width: 40, height: 40, borderRadius: 12,
+                  background: isDark ? '#334155' : w.color,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  flexShrink: 0
+                }}><Icon name={w.icon} size={20} color={w.iconColor || theme.primary} /></div>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ fontSize: 14, fontWeight: 700, color: textPrimary }}>{w.name}</div>
+                      <div style={{ fontSize: 11, color: textSec }}>{w.subject} ・ {w.count}問 苦手</div>
+                    </div>
+                    <div style={{ textAlign: 'right' }}>
+                      <div style={{ fontSize: 18, fontWeight: 800, color: '#EF4444', lineHeight: 1 }}>{w.accuracy}%</div>
+                      <div style={{ fontSize: 9, color: textSec, marginTop: 2 }}>正解率</div>
+                    </div>
+                  </div>
+                  {/* Accuracy bar */}
+                  <div style={{ background: isDark ? '#334155' : '#F1F5F9', borderRadius: 99, height: 6, overflow: 'hidden', marginBottom: 8 }}>
+                    <div style={{
+                  width: `${w.accuracy}%`, height: '100%',
+                  background: `linear-gradient(90deg, #EF4444, #F59E0B)`,
+                  borderRadius: 99
+                }} />
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <span style={{ fontSize: 10, color: textSec }}>目標 80%</span>
+                    <span style={{
+                  fontSize: 11, fontWeight: 700, color: theme.primary,
+                  display: 'inline-flex', alignItems: 'center', gap: 4
+                }}>集中復習する →</span>
+                  </div>
+                </button>
+            )}
+            </div>
+          </>
+        }
+
+        {activeTab === 'bookmark' &&
+        <>
+            <div style={{ fontSize: 11, color: textSec, fontWeight: 500, marginBottom: 8, padding: '6px 2px' }}>
+              保存した問題 ・ {bookmarks.length}件
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              {bookmarks.map((b, i) =>
+            <button key={i} onClick={() => onNavigate('quiz')} style={{
+              background: cardBg, border: `1px solid ${borderCol}`,
+              borderRadius: 14, padding: '12px 14px', textAlign: 'left',
+              cursor: 'pointer', fontFamily: 'Noto Sans JP',
+              boxShadow: isDark ? 'none' : '0 1px 4px rgba(0,0,0,0.04)',
+              display: 'flex', alignItems: 'flex-start', gap: 12
+            }}>
+                  <div style={{
+                width: 36, height: 36, borderRadius: 10,
+                background: isDark ? '#334155' : theme.light,
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                flexShrink: 0
+              }}><Icon name={b.icon} size={18} color={b.iconColor || theme.primary} /></div>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ display: 'flex', gap: 6, marginBottom: 4, alignItems: 'center' }}>
+                      <span style={{ fontSize: 10, fontWeight: 600, color: theme.primary }}>{b.subject}</span>
+                      <span style={{ fontSize: 10, color: textSec }}>・ 保存 {b.date}</span>
+                    </div>
+                    <div style={{
+                  fontSize: 13, fontWeight: 500, color: textPrimary, lineHeight: 1.5
+                }}>{b.q}</div>
+                  </div>
+                  <Icon name="bookmark" size={16} color={theme.accent} />
+                </button>
+            )}
+            </div>
+          </>
+        }
+      </div>
+      </div>
+
+      
+    </div>);
+
+}
+
+// ─── Screen P: PROFILE (マイページ) ──────────────────────────
+function ProfileScreen({ theme, variant, onNavigate }) {
+  const isDark = variant === 'C';
+  const bg = isDark ? '#0F172A' : '#F8FAFF';
+  const cardBg = isDark ? '#1E293B' : 'white';
+  const textPrimary = isDark ? '#F1F5F9' : '#111827';
+  const textSec = isDark ? '#94A3B8' : '#6B7280';
+  const borderCol = isDark ? '#334155' : '#E5E7EB';
+
+  const user = {
+    name: '佐藤 美咲',
+    handle: '@misaki.s',
+    school: '東京医科大学 ・ 3年',
+    level: 7,
+    levelTitle: 'インターン',
+    xp: 340,
+    maxXp: 500,
+    totalXp: 3840,
+    joined: '2025年10月'
+  };
+
+  const stats = [
+    { label: '連続日数', value: '5', unit: '日', icon: 'flame', color: '#F59E0B' },
+    { label: '総問題数', value: '842', unit: '問', icon: 'pencil', color: theme.primary },
+    { label: '正解率', value: '78', unit: '%', icon: 'target', color: '#10B981' },
+    { label: '総XP', value: '3,840', unit: '', icon: 'bolt', color: '#8B5CF6' }
+  ];
+
+  const masteries = [
+    { name: '解剖学', pct: 72, icon: 'heart', color: '#EF4444' },
+    { name: '生理学', pct: 85, icon: 'bolt', color: '#10B981' },
+    { name: '薬理学', pct: 48, icon: 'pill', color: '#F59E0B' },
+    { name: '病理学', pct: 31, icon: 'microscope', color: '#8B5CF6' },
+    { name: '微生物学', pct: 56, icon: 'flask', color: '#EC4899' }
+  ];
+
+  const badges = [
+    { icon: 'flame', label: '5日連続', earned: true, rarity: 'common' },
+    { icon: 'target', label: '正解率80%', earned: true, rarity: 'rare' },
+    { icon: 'bolt', label: 'スピード王', earned: true, rarity: 'rare' },
+    { icon: 'book', label: '100問達成', earned: true, rarity: 'common' },
+    { icon: 'star', label: '初レベル10', earned: false, rarity: 'epic' },
+    { icon: 'gem', label: '全科目マスター', earned: false, rarity: 'legendary' }
+  ];
+
+  // GitHub風カレンダーデータ（過去12週、7日×12列）
+  const calendarData = [];
+  for (let w = 0; w < 12; w++) {
+    const week = [];
+    for (let d = 0; d < 7; d++) {
+      // ランダムだが決定的に（seedベース）
+      const seed = (w * 7 + d) * 9301 + 49297;
+      const rand = (seed % 233280) / 233280;
+      let level = 0;
+      if (rand > 0.3) level = 1;
+      if (rand > 0.55) level = 2;
+      if (rand > 0.75) level = 3;
+      if (rand > 0.9) level = 4;
+      // 直近3週間は連続してる演出
+      if (w >= 9 && rand > 0.15) level = Math.max(level, 2);
+      week.push(level);
+    }
+    calendarData.push(week);
+  }
+
+  const cellColors = isDark
+    ? ['#1E293B', theme.primary + '40', theme.primary + '70', theme.primary + 'AA', theme.primary]
+    : ['#EEF2F7', theme.mid, theme.primary + '80', theme.primary + 'BB', theme.primary];
+
+  const menuItems = [
+    { icon: 'target', label: '学習目標を設定', sub: '1日10問 ・ 現在 3/10' },
+    { icon: 'bell', label: '通知設定', sub: '毎日 20:00 にリマインド' },
+    { icon: 'moon', label: 'ダークモード', sub: variant === 'C' ? 'オン' : 'オフ', toggle: true, on: variant === 'C' },
+    { icon: 'download', label: 'データをエクスポート', sub: 'CSV / PDF で出力' },
+    { icon: 'help', label: 'ヘルプ・お問い合わせ', sub: '' }
+  ];
+
+  return (
+    <div style={{ background: bg, minHeight: '100%', paddingBottom: 100 }}>
+      {/* Header hero */}
+      <div style={{
+        background: variant === 'C' ?
+          'linear-gradient(135deg, #1E293B 0%, #0F172A 100%)' :
+          variant === 'B' ?
+            `linear-gradient(135deg, ${theme.primary} 0%, ${theme.accent} 100%)` :
+            `linear-gradient(135deg, ${theme.primary} 0%, ${theme.dark} 100%)`,
+        padding: '56px 20px 60px', position: 'relative', overflow: 'hidden'
+      }}>
+        <div style={{ position: 'absolute', top: -30, right: -30, width: 180, height: 180, borderRadius: '50%', background: 'rgba(255,255,255,0.06)' }} />
+        <div style={{ position: 'absolute', bottom: -40, left: -20, width: 120, height: 120, borderRadius: '50%', background: 'rgba(255,255,255,0.04)' }} />
+
+        {/* Top action bar */}
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20, position: 'relative' }}>
+          <p style={{ color: 'rgba(255,255,255,0.75)', fontSize: 13, fontWeight: 500, display: 'flex', alignItems: 'center', gap: 6 }}><Icon name="user" size={14} color="rgba(255,255,255,0.85)" />マイページ</p>
+          <div style={{ display: 'flex', gap: 8 }}>
+            <button style={{
+              background: 'rgba(255,255,255,0.15)', border: 'none', borderRadius: 10,
+              width: 34, height: 34, display: 'flex', alignItems: 'center', justifyContent: 'center',
+              cursor: 'pointer', backdropFilter: 'blur(8px)'
+            }}><Icon name="edit" size={15} color="white" /></button>
+            <button style={{
+              background: 'rgba(255,255,255,0.15)', border: 'none', borderRadius: 10,
+              width: 34, height: 34, display: 'flex', alignItems: 'center', justifyContent: 'center',
+              cursor: 'pointer', backdropFilter: 'blur(8px)'
+            }}><Icon name="settings" size={15} color="white" /></button>
+          </div>
+        </div>
+
+        {/* Avatar + name */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 14, position: 'relative', marginBottom: 16 }}>
+          <div style={{ position: 'relative' }}>
+            <div style={{
+              width: 76, height: 76, borderRadius: '50%',
+              background: `linear-gradient(135deg, ${theme.accent}, ${theme.primary})`,
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              fontSize: 30, fontWeight: 800, color: 'white',
+              border: '3px solid rgba(255,255,255,0.3)',
+              boxShadow: '0 6px 18px rgba(0,0,0,0.2)'
+            }}>美</div>
+            {/* Level badge */}
+            <div style={{
+              position: 'absolute', bottom: -2, right: -2,
+              background: theme.accent, color: 'white',
+              borderRadius: '50%', width: 26, height: 26,
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              fontSize: 11, fontWeight: 800,
+              border: '2.5px solid white'
+            }}>{user.level}</div>
+          </div>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ color: 'white', fontSize: 18, fontWeight: 800, marginBottom: 2 }}>{user.name}</div>
+            <div style={{ color: 'rgba(255,255,255,0.7)', fontSize: 12, marginBottom: 4 }}>{user.handle}</div>
+            <div style={{
+              display: 'inline-flex', alignItems: 'center', gap: 4,
+              background: 'rgba(255,255,255,0.15)', borderRadius: 99, padding: '3px 10px',
+              backdropFilter: 'blur(8px)'
+            }}>
+              <Icon name="cap" size={11} color="white" />
+              <span style={{ color: 'white', fontSize: 10, fontWeight: 500 }}>{user.school}</span>
+            </div>
+          </div>
+        </div>
+
+        {/* XP progress */}
+        <div style={{
+          background: 'rgba(255,255,255,0.12)', borderRadius: 14,
+          padding: '10px 14px', backdropFilter: 'blur(8px)', position: 'relative'
+        }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+            <span style={{ color: 'white', fontSize: 12, fontWeight: 600 }}>
+              Lv.{user.level} {user.levelTitle} → Lv.{user.level + 1}
+            </span>
+            <span style={{ color: 'rgba(255,255,255,0.75)', fontSize: 11, fontWeight: 500 }}>{user.xp}/{user.maxXp} XP</span>
+          </div>
+          <XPBar xp={user.xp} maxXp={user.maxXp} theme={{ ...theme, mid: 'rgba(255,255,255,0.2)' }} />
+        </div>
+      </div>
+
+      {/* Content panel */}
+      <div style={{ borderRadius: "14px 14px 0 0", margin: "-16px 0 0", background: bg, position: "relative", zIndex: 1, paddingTop: 6 }}>
+
+      {/* Overlapping stats card */}
+      <div style={{ padding: '0 16px', marginTop: -28, position: 'relative' }}>
+        <div style={{
+          background: cardBg, borderRadius: 18, padding: '14px 10px',
+          border: `1px solid ${borderCol}`,
+          boxShadow: isDark ? '0 8px 24px rgba(0,0,0,0.4)' : '0 8px 24px rgba(0,0,0,0.08)',
+          display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: 4
+        }}>
+          {stats.map((s, i) => (
+            <div key={s.label} style={{
+              textAlign: 'center', padding: '4px 2px',
+              borderRight: i < stats.length - 1 ? `1px solid ${borderCol}` : 'none'
+            }}>
+              <div style={{ marginBottom: 4, display: 'flex', justifyContent: 'center' }}><Icon name={s.icon} size={16} color={s.color} /></div>
+              <div style={{ fontSize: 16, fontWeight: 800, color: textPrimary, lineHeight: 1 }}>
+                {s.value}<span style={{ fontSize: 10, color: textSec, fontWeight: 600, marginLeft: 1 }}>{s.unit}</span>
+              </div>
+              <div style={{ fontSize: 9, color: textSec, fontWeight: 500, marginTop: 4 }}>{s.label}</div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Learning calendar (GitHub-style heatmap) */}
+      <div style={{ padding: '20px 16px 0' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+          <span style={{ fontSize: 14, fontWeight: 700, color: textPrimary }}>学習カレンダー</span>
+          <span style={{ fontSize: 11, color: textSec, fontWeight: 500 }}>過去 84 日 ・ 68日学習</span>
+        </div>
+        <div style={{
+          background: cardBg, borderRadius: 16, padding: '14px 12px',
+          border: `1px solid ${borderCol}`,
+          boxShadow: isDark ? 'none' : '0 1px 4px rgba(0,0,0,0.04)'
+        }}>
+          <div style={{ display: 'flex', gap: 3, justifyContent: 'center' }}>
+            {calendarData.map((week, wi) => (
+              <div key={wi} style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+                {week.map((lvl, di) => (
+                  <div key={di} style={{
+                    width: 13, height: 13, borderRadius: 3,
+                    background: cellColors[lvl],
+                    transition: 'transform .15s'
+                  }} />
+                ))}
+              </div>
+            ))}
+          </div>
+          {/* Legend */}
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 4, marginTop: 10 }}>
+            <span style={{ fontSize: 10, color: textSec }}>少</span>
+            {[0, 1, 2, 3, 4].map(l => (
+              <div key={l} style={{ width: 10, height: 10, borderRadius: 2, background: cellColors[l] }} />
+            ))}
+            <span style={{ fontSize: 10, color: textSec }}>多</span>
+          </div>
+        </div>
+      </div>
+
+      {/* Subject mastery */}
+      <div style={{ padding: '20px 16px 0' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+          <span style={{ fontSize: 14, fontWeight: 700, color: textPrimary }}>科目別 熟達度</span>
+          <span onClick={() => onNavigate('courses')} style={{ fontSize: 12, color: theme.primary, fontWeight: 600, cursor: 'pointer' }}>すべて →</span>
+        </div>
+        <div style={{
+          background: cardBg, borderRadius: 16, padding: '14px',
+          border: `1px solid ${borderCol}`,
+          boxShadow: isDark ? 'none' : '0 1px 4px rgba(0,0,0,0.04)',
+          display: 'flex', flexDirection: 'column', gap: 12
+        }}>
+          {masteries.map(m => (
+            <div key={m.name} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+              <div style={{
+                width: 28, height: 28, borderRadius: 8,
+                background: isDark ? '#334155' : theme.light,
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                flexShrink: 0
+              }}><Icon name={m.icon} size={14} color={m.color} /></div>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
+                  <span style={{ fontSize: 12, fontWeight: 600, color: textPrimary }}>{m.name}</span>
+                  <span style={{ fontSize: 11, fontWeight: 700, color: textSec }}>{m.pct}%</span>
+                </div>
+                <div style={{ background: isDark ? '#334155' : '#F1F5F9', borderRadius: 99, height: 6, overflow: 'hidden' }}>
+                  <div style={{
+                    width: `${m.pct}%`, height: '100%',
+                    background: `linear-gradient(90deg, ${theme.primary}, ${theme.accent})`,
+                    borderRadius: 99, transition: 'width .6s'
+                  }} />
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Badges */}
+      <div style={{ padding: '20px 16px 0' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+          <span style={{ fontSize: 14, fontWeight: 700, color: textPrimary }}>獲得バッジ</span>
+          <span style={{ fontSize: 11, color: textSec, fontWeight: 500 }}>4 / 24</span>
+        </div>
+        <div style={{
+          background: cardBg, borderRadius: 16, padding: '14px 12px',
+          border: `1px solid ${borderCol}`,
+          boxShadow: isDark ? 'none' : '0 1px 4px rgba(0,0,0,0.04)',
+          display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8
+        }}>
+          {badges.map(b => {
+            const rarityBorder = {
+              common: isDark ? '#475569' : '#E5E7EB',
+              rare: theme.primary,
+              epic: '#8B5CF6',
+              legendary: '#F59E0B'
+            }[b.rarity];
+            return (
+              <div key={b.label} style={{
+                textAlign: 'center',
+                background: b.earned ? (isDark ? '#0F172A' : theme.light) : (isDark ? '#0F172A80' : '#F9FAFB'),
+                border: `1.5px solid ${b.earned ? rarityBorder : (isDark ? '#334155' : '#E5E7EB')}`,
+                borderRadius: 12, padding: '10px 4px',
+                opacity: b.earned ? 1 : 0.5,
+                position: 'relative'
+              }}>
+                <div style={{
+                  marginBottom: 4, display: 'flex', justifyContent: 'center',
+                  filter: b.earned ? 'none' : 'grayscale(1)',
+                  opacity: b.earned ? 1 : 0.6
+                }}><Icon name={b.icon} size={22} color={b.earned ? rarityBorder : (isDark ? '#64748B' : '#9CA3AF')} /></div>
+                <div style={{ fontSize: 9, fontWeight: 700, color: textPrimary, lineHeight: 1.2 }}>{b.label}</div>
+                {!b.earned && (
+                  <div style={{ position: 'absolute', top: 4, right: 4 }}><Icon name="lock" size={10} color={isDark ? '#64748B' : '#9CA3AF'} /></div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Settings menu */}
+      <div style={{ padding: '20px 16px 0' }}>
+        <div style={{ fontSize: 14, fontWeight: 700, color: textPrimary, marginBottom: 10 }}>設定</div>
+        <div style={{
+          background: cardBg, borderRadius: 16,
+          border: `1px solid ${borderCol}`,
+          boxShadow: isDark ? 'none' : '0 1px 4px rgba(0,0,0,0.04)',
+          overflow: 'hidden'
+        }}>
+          {menuItems.map((m, i) => (
+            <div key={m.label} style={{
+              display: 'flex', alignItems: 'center', gap: 12,
+              padding: '12px 14px',
+              borderBottom: i < menuItems.length - 1 ? `1px solid ${borderCol}` : 'none',
+              cursor: 'pointer'
+            }}>
+              <div style={{
+                width: 32, height: 32, borderRadius: 10,
+                background: isDark ? '#334155' : theme.light,
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                flexShrink: 0
+              }}><Icon name={m.icon} size={15} color={theme.primary} /></div>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontSize: 13, fontWeight: 600, color: textPrimary }}>{m.label}</div>
+                {m.sub && <div style={{ fontSize: 10, color: textSec, marginTop: 1 }}>{m.sub}</div>}
+              </div>
+              {m.toggle ? (
+                <div onClick={(e) => { e.stopPropagation(); window.setVariant?.(m.on ? 'A' : 'C'); }} style={{
+                  width: 38, height: 22, borderRadius: 99,
+                  background: m.on ? theme.primary : (isDark ? '#475569' : '#D1D5DB'),
+                  position: 'relative', transition: 'background .2s', cursor: 'pointer', flexShrink: 0
+                }}>
+                  <div style={{
+                    position: 'absolute', top: 2, left: m.on ? 18 : 2,
+                    width: 18, height: 18, borderRadius: '50%',
+                    background: 'white', transition: 'left .2s',
+                    boxShadow: '0 1px 3px rgba(0,0,0,0.2)'
+                  }} />
+                </div>
+              ) : (
+                <span style={{ fontSize: 16, color: textSec, flexShrink: 0 }}>›</span>
+              )}
+            </div>
+          ))}
+        </div>
+
+        {/* Logout */}
+        <button style={{
+          width: '100%', marginTop: 12,
+          background: 'transparent',
+          border: `1.5px solid ${isDark ? '#475569' : '#FCA5A5'}`,
+          borderRadius: 14, padding: '12px',
+          fontSize: 13, fontWeight: 600, fontFamily: 'Noto Sans JP',
+          color: '#EF4444', cursor: 'pointer'
+        }}>ログアウト</button>
+
+        <div style={{ textAlign: 'center', marginTop: 14, fontSize: 10, color: textSec }}>
+          MedQuiz v1.2.0 ・ 登録 {user.joined}
+        </div>
+      </div>
+      </div>
+
+      
+    </div>
+  );
+}
+
+// ─── Screen: ANATOMY UNITS (解剖学の単元一覧) ─────────────────
+const ANATOMY_UNITS = [
+  {
+    id: 'cardio', name: '循環器系', subtitle: '心臓と血管の構造',
+    accent: '#DC2626', accentSoft: '#FEE2E2',
+    lessons: 5, done: 3, icon: 'heart'
+  },
+  {
+    id: 'resp', name: '呼吸器系', subtitle: '肺・気道・ガス交換',
+    accent: '#0891B2', accentSoft: '#CFFAFE',
+    lessons: 4, done: 1, icon: 'lung'
+  },
+  {
+    id: 'nervous', name: '神経系', subtitle: '中枢・末梢神経',
+    accent: '#7C3AED', accentSoft: '#EDE9FE',
+    lessons: 6, done: 0, icon: 'brain'
+  },
+  {
+    id: 'musculo', name: '筋骨格系', subtitle: '骨・関節・筋肉',
+    accent: '#B45309', accentSoft: '#FEF3C7',
+    lessons: 5, done: 0, icon: 'bone'
+  },
+  {
+    id: 'digest', name: '消化器系', subtitle: '胃・腸・肝胆膵',
+    accent: '#15803D', accentSoft: '#DCFCE7',
+    lessons: 4, done: 0, icon: 'stomach'
+  },
+  {
+    id: 'renal', name: '泌尿生殖器系', subtitle: '腎・膀胱・生殖',
+    accent: '#0369A1', accentSoft: '#E0F2FE',
+    lessons: 4, done: 0, icon: 'kidney'
+  }
+];
+
+// Inline SVG icons for units (original, medical-themed)
+function UnitIcon({ kind, color, size = 28 }) {
+  const s = { width: size, height: size, display: 'block' };
+  if (kind === 'heart') return (
+    <svg viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={s}>
+      <path d="M12 21s-7-4.5-7-11a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 6.5-7 11-7 11z" />
+      <path d="M3 13h4l1.5-3 3 6 2-4h7.5" />
+    </svg>
+  );
+  if (kind === 'lung') return (
+    <svg viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={s}>
+      <path d="M12 4v10" />
+      <path d="M6 21c-2 0-3-1.5-3-4V10c0-2 3-4 4-1l2 10c0 1-1 2-3 2z" />
+      <path d="M18 21c2 0 3-1.5 3-4V10c0-2-3-4-4-1l-2 10c0 1 1 2 3 2z" />
+    </svg>
+  );
+  if (kind === 'brain') return (
+    <svg viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={s}>
+      <path d="M9 3a3 3 0 0 0-3 3 3 3 0 0 0-2 5 3 3 0 0 0 1 5 3 3 0 0 0 4 3V3z" />
+      <path d="M15 3a3 3 0 0 1 3 3 3 3 0 0 1 2 5 3 3 0 0 1-1 5 3 3 0 0 1-4 3V3z" />
+    </svg>
+  );
+  if (kind === 'bone') return (
+    <svg viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={s}>
+      <path d="M5 5a2.5 2.5 0 0 1 4-2 2.5 2.5 0 0 1 2 0 2.5 2.5 0 0 1 0 4l-5 5-4-1-1-4 4 1z" transform="rotate(0 12 12)"/>
+      <path d="M17 17l2 2a2.5 2.5 0 0 0 4-2 2.5 2.5 0 0 0-2-4l-2-2" />
+      <line x1="8" y1="8" x2="17" y2="17" />
+    </svg>
+  );
+  if (kind === 'stomach') return (
+    <svg viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={s}>
+      <path d="M8 3v5c0 3 2 5 5 5h3a4 4 0 0 1 0 8c-4 0-8-3-8-8V8" />
+      <path d="M8 3h3" />
+    </svg>
+  );
+  if (kind === 'kidney') return (
+    <svg viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={s}>
+      <path d="M8 4c-3 0-5 3-5 8s2 8 5 8 3-2 4-4 2-4 4-4c0 0 5-1 5-4s-4-4-7-4-3 0-6 0z" />
+    </svg>
+  );
+  return null;
+}
+
+function AnatomyUnitsScreen({ theme, variant, onNavigate, openUnit }) {
+  const isDark = variant === 'C';
+  const bg = isDark ? '#0F172A' : '#F6F7FB';
+  const cardBg = isDark ? '#1E293B' : 'white';
+  const textPrimary = isDark ? '#F1F5F9' : '#0F172A';
+  const textSec = isDark ? '#94A3B8' : '#64748B';
+  const borderCol = isDark ? '#334155' : '#E5E7EB';
+
+  const totalLessons = ANATOMY_UNITS.reduce((a, u) => a + u.lessons, 0);
+  const doneLessons = ANATOMY_UNITS.reduce((a, u) => a + u.done, 0);
+  const overall = Math.round(doneLessons / totalLessons * 100);
+
+  return (
+    <div style={{ background: bg, minHeight: '100%', paddingBottom: 100 }}>
+      {/* Header */}
+      <div style={{
+        background: isDark ? '#0F172A' : 'white',
+        padding: '56px 20px 16px',
+        borderBottom: `1px solid ${borderCol}`
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 18 }}>
+          <button onClick={() => onNavigate('courses')} style={{
+            background: 'none', border: 'none', cursor: 'pointer', padding: 4,
+            display: 'flex', alignItems: 'center', color: textPrimary
+          }}>
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+              <polyline points="15 18 9 12 15 6"/>
+            </svg>
+          </button>
+          <div style={{ fontSize: 10, fontWeight: 700, color: textSec, letterSpacing: 1.5, textTransform: 'uppercase' }}>COURSE</div>
+        </div>
+        <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', marginBottom: 14 }}>
+          <div>
+            <h1 style={{ fontSize: 28, fontWeight: 800, color: textPrimary, letterSpacing: -0.5, lineHeight: 1.1 }}>解剖学</h1>
+            <p style={{ fontSize: 12, color: textSec, marginTop: 4 }}>Anatomy ・ {ANATOMY_UNITS.length} ユニット ・ {totalLessons} レッスン</p>
+          </div>
+          <div style={{
+            position: 'relative', width: 54, height: 54
+          }}>
+            <svg viewBox="0 0 54 54" style={{ transform: 'rotate(-90deg)', width: '100%', height: '100%' }}>
+              <circle cx="27" cy="27" r="22" fill="none" stroke={isDark ? '#334155' : '#E5E7EB'} strokeWidth="4" />
+              <circle cx="27" cy="27" r="22" fill="none" stroke={theme.primary} strokeWidth="4"
+                strokeDasharray={`${2 * Math.PI * 22 * overall / 100} ${2 * Math.PI * 22}`}
+                strokeLinecap="round" />
+            </svg>
+            <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, fontWeight: 800, color: textPrimary }}>
+              {overall}%
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Section label */}
+      <div style={{ padding: '18px 20px 10px', display: 'flex', alignItems: 'center', gap: 8 }}>
+        <div style={{ width: 3, height: 14, background: theme.primary, borderRadius: 2 }} />
+        <span style={{ fontSize: 12, fontWeight: 700, color: textPrimary, letterSpacing: 0.5 }}>ユニットを選ぶ</span>
+      </div>
+
+      {/* Unit list */}
+      <div style={{ padding: '0 16px', display: 'flex', flexDirection: 'column', gap: 10 }}>
+        {ANATOMY_UNITS.map((u, i) => {
+          const pct = Math.round(u.done / u.lessons * 100);
+          const locked = i > 0 && ANATOMY_UNITS[i - 1].done < ANATOMY_UNITS[i - 1].lessons && u.done === 0;
+          return (
+            <button key={u.id} onClick={() => !locked && openUnit(u.id)} disabled={locked} style={{
+              background: cardBg,
+              border: `1px solid ${borderCol}`,
+              borderRadius: 18, padding: '16px 14px',
+              textAlign: 'left', cursor: locked ? 'not-allowed' : 'pointer',
+              fontFamily: 'Noto Sans JP',
+              boxShadow: isDark ? 'none' : '0 1px 2px rgba(15,23,42,0.04)',
+              display: 'flex', alignItems: 'center', gap: 14,
+              opacity: locked ? 0.55 : 1,
+              position: 'relative', overflow: 'hidden'
+            }}>
+              {/* Left accent stripe */}
+              <div style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: 4, background: locked ? (isDark ? '#475569' : '#CBD5E1') : u.accent }} />
+              {/* Icon square */}
+              <div style={{
+                width: 52, height: 52, borderRadius: 14,
+                background: locked ? (isDark ? '#334155' : '#F1F5F9') : (isDark ? u.accent + '25' : u.accentSoft),
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                flexShrink: 0, marginLeft: 4
+              }}>
+                <UnitIcon kind={u.icon} color={locked ? (isDark ? '#64748B' : '#94A3B8') : u.accent} />
+              </div>
+              {/* Text */}
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 2 }}>
+                  <div style={{ fontSize: 10, fontWeight: 700, color: textSec, letterSpacing: 0.8 }}>UNIT {String(i + 1).padStart(2, '0')}</div>
+                  {u.done === u.lessons && u.done > 0 && (
+                    <span style={{ fontSize: 9, fontWeight: 700, color: '#047857', background: '#D1FAE5', padding: '1px 6px', borderRadius: 20 }}>完了</span>
+                  )}
+                  {u.done > 0 && u.done < u.lessons && (
+                    <span style={{ fontSize: 9, fontWeight: 700, color: u.accent, background: isDark ? u.accent + '25' : u.accentSoft, padding: '1px 6px', borderRadius: 20 }}>学習中</span>
+                  )}
+                </div>
+                <div style={{ fontSize: 15, fontWeight: 700, color: textPrimary, marginBottom: 2 }}>{u.name}</div>
+                <div style={{ fontSize: 11, color: textSec, marginBottom: 8 }}>{u.subtitle}</div>
+                {/* Progress bar */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <div style={{ flex: 1, background: isDark ? '#334155' : '#F1F5F9', borderRadius: 99, height: 4, overflow: 'hidden' }}>
+                    <div style={{
+                      width: `${pct}%`, height: '100%',
+                      background: u.accent, borderRadius: 99
+                    }} />
+                  </div>
+                  <span style={{ fontSize: 10, color: textSec, fontWeight: 600, whiteSpace: 'nowrap' }}>{u.done}/{u.lessons}</span>
+                </div>
+              </div>
+              {/* Chevron / lock */}
+              {locked ? (
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={textSec} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+                </svg>
+              ) : (
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={textSec} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <polyline points="9 18 15 12 9 6"/>
+                </svg>
+              )}
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+// ─── Screen: TOPIC JOURNEY (ユニット内のトピック・レッスンパス) ─
+// Lesson node types: intro, practice, concept, case, boss (assessment), review
+const LESSON_ICONS = {
+  intro: (c) => <svg viewBox="0 0 24 24" fill="none" stroke={c} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>,
+  practice: (c) => <svg viewBox="0 0 24 24" fill="none" stroke={c} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>,
+  concept: (c) => <svg viewBox="0 0 24 24" fill="none" stroke={c} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2l3 7h7l-5.5 4.5L18 21l-6-4-6 4 1.5-7.5L2 9h7z"/></svg>,
+  case: (c) => <svg viewBox="0 0 24 24" fill="none" stroke={c} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="7" width="18" height="13" rx="2"/><path d="M8 7V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>,
+  boss: (c) => <svg viewBox="0 0 24 24" fill="none" stroke={c} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M8 21h8"/><path d="M12 17v4"/><path d="M7 4h10v5a5 5 0 0 1-10 0z"/><path d="M17 4h3v2a3 3 0 0 1-3 3"/><path d="M7 4H4v2a3 3 0 0 0 3 3"/></svg>,
+  review: (c) => <svg viewBox="0 0 24 24" fill="none" stroke={c} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 12a9 9 0 1 1-3-6.7L21 8"/><polyline points="21 3 21 8 16 8"/></svg>
+};
+
+const UNIT_LESSONS = {
+  cardio: {
+    name: '循環器系', subtitle: '心臓と血管の構造・機能を学ぶ',
+    accent: '#DC2626', accentSoft: '#FEE2E2', accentDeep: '#991B1B',
+    lessons: [
+      { id: 'l1', type: 'intro', title: '解剖学 基礎', sub: '用語と面の定義', state: 'done', q: 6 },
+      { id: 'l2', type: 'concept', title: '心臓の構造', sub: '4つの房室と弁', state: 'done', q: 8 },
+      { id: 'l3', type: 'practice', title: '弁膜のダイナミクス', sub: '開閉タイミング', state: 'done', q: 10 },
+      { id: 'l4', type: 'practice', title: '圧力と血流', sub: '大・肺循環の圧勾配', state: 'current', q: 10 },
+      { id: 'l5', type: 'case', title: '臨床症例', sub: '心雑音から診断へ', state: 'locked', q: 6 },
+      { id: 'boss', type: 'boss', title: 'ユニット総合テスト', sub: '全レッスン習得で解放', state: 'locked', q: 20 }
+    ]
+  },
+  resp: {
+    name: '呼吸器系', subtitle: '肺・気道・ガス交換',
+    accent: '#0891B2', accentSoft: '#CFFAFE', accentDeep: '#0E7490',
+    lessons: [
+      { id: 'l1', type: 'intro', title: '気道の解剖', sub: '上気道と下気道', state: 'done', q: 6 },
+      { id: 'l2', type: 'practice', title: '肺葉と区域', sub: '左右の違い', state: 'current', q: 8 },
+      { id: 'l3', type: 'concept', title: 'ガス交換', sub: '肺胞での拡散', state: 'locked', q: 8 },
+      { id: 'l4', type: 'case', title: '臨床症例', sub: 'CT画像の読影', state: 'locked', q: 6 },
+      { id: 'boss', type: 'boss', title: 'ユニット総合テスト', sub: '全レッスン習得で解放', state: 'locked', q: 20 }
+    ]
+  }
+};
+// Default fallback
+['nervous', 'musculo', 'digest', 'renal'].forEach(id => {
+  if (!UNIT_LESSONS[id]) {
+    const u = ANATOMY_UNITS.find(x => x.id === id);
+    UNIT_LESSONS[id] = {
+      name: u.name, subtitle: u.subtitle,
+      accent: u.accent, accentSoft: u.accentSoft, accentDeep: u.accent,
+      lessons: [
+        { id: 'l1', type: 'intro', title: '基礎概念', sub: '用語と全体像', state: 'locked', q: 6 },
+        { id: 'l2', type: 'concept', title: '主要な構造', sub: '部位と名称', state: 'locked', q: 8 },
+        { id: 'l3', type: 'practice', title: '機能と関係', sub: '基本原理', state: 'locked', q: 10 },
+        { id: 'l4', type: 'case', title: '臨床症例', sub: '応用問題', state: 'locked', q: 6 },
+        { id: 'boss', type: 'boss', title: 'ユニット総合テスト', sub: '全レッスン習得で解放', state: 'locked', q: 20 }
+      ]
+    };
+  }
+});
+
+function TopicJourneyScreen({ theme, variant, unitId, onNavigate, goBack }) {
+  const isDark = variant === 'C';
+  const unit = UNIT_LESSONS[unitId] || UNIT_LESSONS.cardio;
+  const bg = isDark ? '#0F172A' : '#F6F7FB';
+  const cardBg = isDark ? '#1E293B' : 'white';
+  const textPrimary = isDark ? '#F1F5F9' : '#0F172A';
+  const textSec = isDark ? '#94A3B8' : '#64748B';
+  const borderCol = isDark ? '#334155' : '#E5E7EB';
+
+  const regular = unit.lessons.filter(l => l.type !== 'boss');
+  const boss = unit.lessons.find(l => l.type === 'boss');
+  const done = regular.filter(l => l.state === 'done').length;
+  const total = regular.length;
+  const pct = Math.round(done / total * 100);
+
+  // Offsets for a gentle zigzag path — stepped but not too aggressive
+  const offsets = [0, 48, 72, 48, 0, -48, -72, -48];
+
+  return (
+    <div style={{ background: bg, minHeight: '100%', paddingBottom: 100 }}>
+      {/* Back bar */}
+      <div style={{
+        padding: '52px 16px 10px',
+        background: bg,
+        position: 'sticky', top: 0, zIndex: 5,
+        display: 'flex', alignItems: 'center', gap: 10
+      }}>
+        <button onClick={goBack} style={{
+          background: cardBg, border: `1px solid ${borderCol}`,
+          width: 36, height: 36, borderRadius: 12,
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          cursor: 'pointer', color: textPrimary
+        }}>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+            <polyline points="15 18 9 12 15 6"/>
+          </svg>
+        </button>
+        <div style={{ flex: 1, fontSize: 12, fontWeight: 600, color: textSec }}>解剖学 / {unit.name}</div>
+      </div>
+
+      {/* Hero banner */}
+      <div style={{ padding: '4px 16px 0' }}>
+        <div style={{
+          background: `linear-gradient(135deg, ${unit.accent} 0%, ${unit.accentDeep} 100%)`,
+          borderRadius: 22, padding: '20px 18px',
+          color: 'white', position: 'relative', overflow: 'hidden',
+          boxShadow: `0 12px 28px ${unit.accent}40`
+        }}>
+          {/* decorative rings */}
+          <svg viewBox="0 0 200 200" style={{
+            position: 'absolute', top: -30, right: -40, width: 180, height: 180, opacity: 0.18
+          }}>
+            <circle cx="100" cy="100" r="80" fill="none" stroke="white" strokeWidth="1.5" />
+            <circle cx="100" cy="100" r="60" fill="none" stroke="white" strokeWidth="1.5" />
+            <circle cx="100" cy="100" r="40" fill="none" stroke="white" strokeWidth="1.5" />
+          </svg>
+          <div style={{ position: 'relative' }}>
+            <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: 2, opacity: 0.75, marginBottom: 6 }}>ANATOMY ・ UNIT</div>
+            <h2 style={{ fontSize: 26, fontWeight: 800, letterSpacing: -0.5, lineHeight: 1.15, marginBottom: 6 }}>{unit.name}</h2>
+            <p style={{ fontSize: 12, opacity: 0.85, lineHeight: 1.5, marginBottom: 16, maxWidth: '85%' }}>{unit.subtitle}</p>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 }}>
+              <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: 0.4 }}>{done}/{total} レッスン</span>
+              <span style={{ flex: 1 }} />
+              <span style={{ fontSize: 11, fontWeight: 700, opacity: 0.9 }}>{pct}%</span>
+            </div>
+            <div style={{ background: 'rgba(255,255,255,0.22)', borderRadius: 99, height: 6, overflow: 'hidden' }}>
+              <div style={{ width: `${pct}%`, height: '100%', background: 'white', borderRadius: 99 }} />
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* The journey path */}
+      <div style={{ padding: '28px 0 8px', position: 'relative' }}>
+        {regular.map((lesson, i) => {
+          const offset = offsets[i % offsets.length];
+          const nextOffset = i < regular.length - 1 ? offsets[(i + 1) % offsets.length] : 0;
+          const isDone = lesson.state === 'done';
+          const isCurrent = lesson.state === 'current';
+          const isLocked = lesson.state === 'locked';
+
+          const nodeColor = isDone ? unit.accent : isCurrent ? unit.accent : (isDark ? '#334155' : '#E2E8F0');
+          const iconColor = isDone ? 'white' : isCurrent ? 'white' : (isDark ? '#64748B' : '#94A3B8');
+
+          return (
+            <div key={lesson.id} style={{
+              position: 'relative',
+              display: 'flex', flexDirection: 'column', alignItems: 'center',
+              marginBottom: i < regular.length - 1 ? 6 : 20
+            }}>
+              {/* Connecting dotted line to next */}
+              {i < regular.length - 1 && (
+                <svg width="200" height="60" viewBox="0 0 200 60" style={{
+                  position: 'absolute', top: 80, left: '50%',
+                  transform: `translateX(calc(-50% + ${(offset + nextOffset) / 2}px))`,
+                  pointerEvents: 'none', zIndex: 0
+                }}>
+                  <path
+                    d={`M ${100 - offset/4} 0 Q ${100 + (nextOffset - offset)/2} 30 ${100 + (nextOffset - offset)/4} 60`}
+                    fill="none"
+                    stroke={isDark ? '#334155' : '#CBD5E1'}
+                    strokeWidth="2.5"
+                    strokeDasharray="2 6"
+                    strokeLinecap="round"
+                  />
+                </svg>
+              )}
+
+              {/* Node */}
+              <div style={{ position: 'relative', transform: `translateX(${offset}px)`, zIndex: 1 }}>
+                {/* START label above current */}
+                {isCurrent && (
+                  <div style={{
+                    position: 'absolute', top: -28, left: '50%', transform: 'translateX(-50%)',
+                    background: unit.accentDeep, color: 'white',
+                    padding: '4px 12px', borderRadius: 20,
+                    fontSize: 10, fontWeight: 800, letterSpacing: 1.2,
+                    boxShadow: `0 4px 12px ${unit.accentDeep}66`,
+                    whiteSpace: 'nowrap'
+                  }}>
+                    今ココ
+                    <svg width="10" height="6" viewBox="0 0 10 6" style={{ position: 'absolute', bottom: -5, left: '50%', transform: 'translateX(-50%)' }}>
+                      <path d="M0 0 L5 6 L10 0 Z" fill={unit.accentDeep} />
+                    </svg>
+                  </div>
+                )}
+
+                <button
+                  onClick={() => !isLocked && onNavigate('quiz')}
+                  disabled={isLocked}
+                  style={{
+                    width: 84, height: 84,
+                    borderRadius: isDone ? '50%' : '26px',
+                    background: nodeColor,
+                    border: 'none',
+                    cursor: isLocked ? 'not-allowed' : 'pointer',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    padding: 0,
+                    boxShadow: isLocked
+                      ? 'inset 0 -3px 0 rgba(0,0,0,0.12)'
+                      : isDone
+                        ? `0 6px 0 ${unit.accentDeep}, 0 10px 20px ${unit.accent}40`
+                        : `0 6px 0 ${unit.accentDeep}, 0 12px 24px ${unit.accent}55`,
+                    transition: 'transform .15s',
+                    position: 'relative'
+                  }}
+                >
+                  <div style={{ width: 34, height: 34, color: iconColor }}>
+                    {isDone
+                      ? <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                      : isLocked
+                        ? <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                        : LESSON_ICONS[lesson.type]('currentColor')
+                    }
+                  </div>
+                  {/* Progress ring for current */}
+                  {isCurrent && (
+                    <svg viewBox="0 0 100 100" style={{ position: 'absolute', inset: -6, width: 'calc(100% + 12px)', height: 'calc(100% + 12px)', transform: 'rotate(-90deg)', pointerEvents: 'none' }}>
+                      <circle cx="50" cy="50" r="47" fill="none" stroke={isDark ? '#1E293B' : '#E2E8F0'} strokeWidth="3" />
+                      <circle cx="50" cy="50" r="47" fill="none" stroke={unit.accentDeep} strokeWidth="3"
+                        strokeDasharray={`${2 * Math.PI * 47 * 0.35} ${2 * Math.PI * 47}`}
+                        strokeLinecap="round" />
+                    </svg>
+                  )}
+                </button>
+
+                {/* Title pill */}
+                <div style={{
+                  position: 'absolute', top: 92, left: '50%', transform: 'translateX(-50%)',
+                  background: cardBg,
+                  border: `1px solid ${borderCol}`,
+                  borderRadius: 14,
+                  padding: '8px 14px',
+                  minWidth: 150, maxWidth: 200,
+                  textAlign: 'center',
+                  boxShadow: isDark ? 'none' : '0 2px 6px rgba(15,23,42,0.06)',
+                  opacity: isLocked ? 0.6 : 1
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4, marginBottom: 2 }}>
+                    <span style={{
+                      fontSize: 8, fontWeight: 800, letterSpacing: 1,
+                      color: isLocked ? textSec : unit.accent,
+                      textTransform: 'uppercase'
+                    }}>
+                      レッスン {i + 1}
+                    </span>
+                    <span style={{ fontSize: 8, color: textSec }}>・</span>
+                    <span style={{ fontSize: 8, color: textSec, fontWeight: 600 }}>{lesson.q}問</span>
+                  </div>
+                  <div style={{ fontSize: 12, fontWeight: 700, color: textPrimary, lineHeight: 1.3 }}>{lesson.title}</div>
+                  <div style={{ fontSize: 10, color: textSec, marginTop: 2 }}>{lesson.sub}</div>
+                </div>
+              </div>
+
+              {/* Spacer for the title pill */}
+              <div style={{ height: 160 }} />
+            </div>
+          );
+        })}
+
+        {/* Boss / Unit assessment */}
+        {boss && (
+          <div style={{ padding: '0 16px', marginTop: 4 }}>
+            <div style={{
+              background: cardBg,
+              border: `1.5px solid ${borderCol}`,
+              borderRadius: 18,
+              padding: '16px',
+              display: 'flex', alignItems: 'center', gap: 14,
+              opacity: boss.state === 'locked' ? 0.75 : 1,
+              boxShadow: isDark ? 'none' : '0 2px 8px rgba(15,23,42,0.05)'
+            }}>
+              <div style={{
+                width: 54, height: 54, borderRadius: 14,
+                background: boss.state === 'locked' ? (isDark ? '#334155' : '#F1F5F9') : unit.accentSoft,
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                flexShrink: 0, color: boss.state === 'locked' ? textSec : unit.accent
+              }}>
+                <div style={{ width: 28, height: 28 }}>
+                  {LESSON_ICONS.boss('currentColor')}
+                </div>
+              </div>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 2 }}>
+                  <span style={{ fontSize: 9, fontWeight: 800, color: unit.accent, letterSpacing: 1 }}>FINAL ・ ユニット総合テスト</span>
+                </div>
+                <div style={{ fontSize: 14, fontWeight: 700, color: textPrimary, marginBottom: 3 }}>{boss.title}</div>
+                <div style={{ fontSize: 10, color: textSec, lineHeight: 1.5 }}>
+                  {boss.state === 'locked'
+                    ? `${unit.name}の全レッスン（${total}/${total}）を完了すると挑戦できます`
+                    : `${boss.q}問 ・ 合格で習得度 100% に`}
+                </div>
+              </div>
+              {boss.state === 'locked' ? (
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={textSec} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+                </svg>
+              ) : (
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={textSec} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <polyline points="9 18 15 12 9 6"/>
+                </svg>
+              )}
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ─── Screen C: RESULT ────────────────────────────────────────
+function ResultScreen({ theme, variant, onNavigate }) {
+  const isDark = variant === 'C';
+  const bg = isDark ? '#0F172A' : '#F8FAFF';
+  const cardBg = isDark ? '#1E293B' : 'white';
+  const textPrimary = isDark ? '#F1F5F9' : '#111827';
+  const textSec = isDark ? '#94A3B8' : '#6B7280';
+  const borderCol = isDark ? '#334155' : '#E5E7EB';
+
+  const score = 8;const total = 10;const xpEarned = 120;
+  const pct = score / total * 100;
+  const breakdown = [
+  { label: '正解', count: 8, color: '#10B981' },
+  { label: '不正解', count: 2, color: '#EF4444' }];
+
+
+  return (
+    <div style={{ background: bg, minHeight: '100%', paddingBottom: 100 }}>
+      {/* Hero result */}
+      <div style={{
+        background: variant === 'C' ?
+        'linear-gradient(135deg, #1E293B 0%, #0F172A 100%)' :
+        `linear-gradient(135deg, ${theme.primary} 0%, ${theme.dark} 100%)`,
+        padding: '68px 20px 36px', textAlign: 'center',
+        borderRadius: '0 0 32px 32px', position: 'relative', overflow: 'hidden'
+      }}>
+        <div style={{ position: 'absolute', top: -20, right: -20, width: 180, height: 180, borderRadius: '50%', background: 'rgba(255,255,255,0.05)' }} />
+        <div style={{ position: 'relative' }}>
+          {/* Score ring */}
+          <div style={{ position: 'relative', width: 120, height: 120, margin: '0 auto 16px' }}>
+            <svg viewBox="0 0 120 120" style={{ transform: 'rotate(-90deg)', width: '100%', height: '100%' }}>
+              <circle cx="60" cy="60" r="52" fill="none" stroke="rgba(255,255,255,0.15)" strokeWidth="10" />
+              <circle cx="60" cy="60" r="52" fill="none" stroke="white" strokeWidth="10"
+              strokeDasharray={`${2 * Math.PI * 52 * pct / 100} ${2 * Math.PI * 52 * (1 - pct / 100)}`}
+              strokeLinecap="round" />
+            </svg>
+            <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+              <span style={{ fontSize: 30, fontWeight: 800, color: 'white', lineHeight: 1 }}>{score}</span>
+              <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.7)', fontWeight: 500 }}>/{total}</span>
+            </div>
+          </div>
+          <h2 style={{ color: 'white', fontSize: 22, fontWeight: 800, marginBottom: 6, display: 'inline-flex', alignItems: 'center', gap: 8 }}>
+            {pct >= 80 ? <><Icon name="party" size={22} color="white" />素晴らしい！</> : pct >= 60 ? <><Icon name="thumbs-up" size={22} color="white" />よくできました</> : <><Icon name="flex" size={22} color="white" />もう少し！</>}
+          </h2>
+          <p style={{ color: 'rgba(255,255,255,0.75)', fontSize: 13 }}>正解率 {pct}%</p>
+
+          {/* XP earned */}
+          <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8, marginTop: 14, background: 'rgba(255,255,255,0.15)', borderRadius: 99, padding: '8px 18px', backdropFilter: 'blur(8px)' }}>
+                        <Icon name="bolt" size={16} color="#FCD34D" />
+            <span style={{ color: 'white', fontWeight: 700, fontSize: 15 }}>+{xpEarned} XP 獲得！</span>
+          </div>
+        </div>
+      </div>
+
+      <div style={{ padding: '20px 16px 0' }}>
+        {/* Level up card */}
+        <div style={{
+          background: cardBg, borderRadius: 18, padding: '16px',
+          border: `1.5px solid ${theme.mid}`, marginBottom: 16,
+          boxShadow: isDark ? 'none' : `0 2px 12px ${theme.mid}`
+        }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+            <span style={{ fontSize: 14, fontWeight: 700, color: textPrimary }}>Lv.7 → Lv.8 まで</span>
+            <span style={{ fontSize: 12, color: textSec }}>460 / 500 XP</span>
+          </div>
+          <XPBar xp={460} maxXp={500} theme={theme} />
+          <p style={{ fontSize: 11, color: textSec, marginTop: 8 }}>あと 40 XP でレベルアップ！</p>
+        </div>
+
+        {/* Breakdown */}
+        <div style={{
+          background: cardBg, borderRadius: 18, padding: '16px',
+          border: `1px solid ${borderCol}`, marginBottom: 16,
+          boxShadow: isDark ? 'none' : '0 2px 8px rgba(0,0,0,0.04)'
+        }}>
+          <div style={{ fontSize: 14, fontWeight: 700, color: textPrimary, marginBottom: 14 }}>問題別結果</div>
+          {[...Array(10)].map((_, i) =>
+          <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>
+              <span style={{ fontSize: 11, color: textSec, width: 16, fontWeight: 500 }}>{i + 1}</span>
+              <div style={{ flex: 1, background: isDark ? '#334155' : '#F1F5F9', borderRadius: 99, height: 8, overflow: 'hidden' }}>
+                <div style={{ width: '100%', height: '100%', background: i < 8 ? '#10B981' : '#EF4444', borderRadius: 99 }} />
+              </div>
+                            <span style={{ display: 'inline-flex', alignItems: 'center' }}>{i < 8 ? <Icon name="check-circle" size={14} color="#10B981" /> : <Icon name="x-circle" size={14} color="#EF4444" />}</span>
+            </div>
+          )}
+        </div>
+
+        {/* Badges earned */}
+        <div style={{
+          background: cardBg, borderRadius: 18, padding: '16px',
+          border: `1px solid ${borderCol}`, marginBottom: 20,
+          boxShadow: isDark ? 'none' : '0 2px 8px rgba(0,0,0,0.04)'
+        }}>
+          <div style={{ fontSize: 14, fontWeight: 700, color: textPrimary, marginBottom: 12, display: 'flex', alignItems: 'center', gap: 6 }}>獲得バッジ <Icon name="medal" size={16} color="#F59E0B" /></div>
+          <div style={{ display: 'flex', gap: 12 }}>
+            {[['flame', '5日連続', '#F59E0B'], ['target', '高正解率', '#10B981'], ['bolt', 'スピード', '#8B5CF6']].map(([ic, lb, col]) =>
+            <div key={lb} style={{ flex: 1, textAlign: 'center', background: isDark ? '#334155' : theme.light, borderRadius: 14, padding: '12px 6px' }}>
+                <div style={{ marginBottom: 6, display: 'flex', justifyContent: 'center' }}><Icon name={ic} size={24} color={col} /></div>
+                <div style={{ fontSize: 10, color: textSec, fontWeight: 600 }}>{lb}</div>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* CTA buttons */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+          <button onClick={() => onNavigate('quiz')} style={{
+            background: theme.primary, color: 'white', border: 'none',
+            borderRadius: 14, padding: '15px', fontSize: 15, fontWeight: 700,
+            fontFamily: 'Noto Sans JP', cursor: 'pointer',
+            boxShadow: `0 4px 14px ${theme.primary}55`,
+            display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 8
+          }}><Icon name="refresh" size={16} color="white" strokeWidth={2.4} />もう一度挑戦する</button>
+          <button onClick={() => onNavigate('home')} style={{
+            background: cardBg, color: theme.primary,
+            border: `2px solid ${theme.mid}`,
+            borderRadius: 14, padding: '14px', fontSize: 15, fontWeight: 700,
+            fontFamily: 'Noto Sans JP', cursor: 'pointer',
+            display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 8
+          }}><Icon name="home" size={16} color={theme.primary} strokeWidth={2.4} />ホームへ戻る</button>
+        </div>
+      </div>
+    </div>);
+
+}
+
+// ─── App shell ───────────────────────────────────────────────
+function App() {
+  const [screen, setScreen] = React.useState('topicJourney');
+  const [activeUnit, setActiveUnit] = React.useState('cardio');
+  const [theme, setThemeName] = React.useState(g_theme);
+  const [variant, setVariantName] = React.useState(g_variant);
+  const [qtype, setQtypeName] = React.useState(g_qtype);
+
+  g_setters.theme = setThemeName;
+  g_setters.variant = setVariantName;
+  g_setters.qtype = setQtypeName;
+
+  React.useEffect(() => {
+    const saved = localStorage.getItem('medquiz_screen');
+    if (saved) setScreen(saved);
+    const savedUnit = localStorage.getItem('medquiz_unit');
+    if (savedUnit) setActiveUnit(savedUnit);
+  }, []);
+
+  const navigate = (s) => {
+    setScreen(s);
+    localStorage.setItem('medquiz_screen', s);
+  };
+  const openUnit = (uid) => {
+    setActiveUnit(uid);
+    localStorage.setItem('medquiz_unit', uid);
+    navigate('topicJourney');
+  };
+
+  const tok = THEMES[theme] || THEMES.blue;
+  const isDark = variant === 'C';
+
+  const screenContent = screen === 'home' ?
+  <HomeScreen theme={tok} variant={variant} onNavigate={navigate} /> :
+  screen === 'courses' ?
+  <CoursesScreen theme={tok} variant={variant} onNavigate={navigate} /> :
+  screen === 'anatomyUnits' ?
+  <AnatomyUnitsScreen theme={tok} variant={variant} onNavigate={navigate} openUnit={openUnit} /> :
+  screen === 'topicJourney' ?
+  <TopicJourneyScreen theme={tok} variant={variant} unitId={activeUnit} onNavigate={navigate} goBack={() => navigate('anatomyUnits')} /> :
+  screen === 'review' ?
+  <ReviewScreen theme={tok} variant={variant} onNavigate={navigate} /> :
+  screen === 'profile' ?
+  <ProfileScreen theme={tok} variant={variant} onNavigate={navigate} /> :
+  screen === 'quiz' ?
+  <QuizScreen theme={tok} variant={variant} qtype={qtype} onNavigate={navigate} /> :
+  <ResultScreen theme={tok} variant={variant} onNavigate={navigate} />;
+
+  return (
+    <div style={{ display: 'flex', gap: 32, alignItems: 'flex-start', flexWrap: 'wrap', justifyContent: 'center' }}>
+      {/* Label */}
+      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12 }}>
+        <IOSDevice width={390} height={844} dark={isDark}>
+          {screenContent}
+          {screen !== 'quiz' && screen !== 'anatomyUnits' && screen !== 'topicJourney' && <TabBar current={screen} onNavigate={navigate} isDark={isDark} theme={tok} />}
+        </IOSDevice>
+        <div style={{ textAlign: 'center' }}>
+          <div style={{ fontSize: 13, fontWeight: 700, color: '#374151', marginBottom: 4 }}>
+            {screen === 'home' ? 'ホーム / ダッシュボード' : screen === 'courses' ? 'コース・科目一覧' : screen === 'anatomyUnits' ? '解剖学 ・ ユニット一覧' : screen === 'topicJourney' ? 'レッスンパス（トピック別）' : screen === 'review' ? '復習 / 間隔反復' : screen === 'profile' ? 'マイページ' : screen === 'quiz' ? 'クイズプレイ' : '結果・スコア'}
+          </div>
+          <div style={{ display: 'flex', gap: 8, justifyContent: 'center', flexWrap: 'wrap' }}>
+            {['home', 'courses', 'anatomyUnits', 'topicJourney', 'review', 'profile', 'quiz', 'result'].map((s) =>
+            <button key={s} onClick={() => navigate(s)} style={{
+              padding: '4px 12px', borderRadius: 20,
+              border: '1.5px solid ' + (screen === s ? tok.primary : '#D1D5DB'),
+              background: screen === s ? tok.light : 'white',
+              color: screen === s ? tok.primary : '#6B7280',
+              fontSize: 11, fontWeight: 600, cursor: 'pointer',
+              fontFamily: 'Noto Sans JP'
+            }}>
+                {s === 'home' ? 'ホーム' : s === 'courses' ? 'コース' : s === 'anatomyUnits' ? '解剖学ユニット' : s === 'topicJourney' ? 'レッスンパス' : s === 'review' ? '復習' : s === 'profile' ? 'マイページ' : s === 'quiz' ? 'クイズ' : '結果'}
+              </button>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>);
+
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+
+// ─── Tweaks bridge ───────────────────────────────────────────
+window.addEventListener('message', (e) => {
+  if (e.data?.type === '__activate_edit_mode') document.getElementById('tweaks-panel').classList.add('visible');
+  if (e.data?.type === '__deactivate_edit_mode') document.getElementById('tweaks-panel').classList.remove('visible');
+});
+window.parent.postMessage({ type: '__edit_mode_available' }, '*');
+</script>
+</body>
+</html>
