@@ -6,6 +6,27 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXBuildFile section */
+		6F6AC3452FA1E1DB0038AF96 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6FD06C302FA07F7800CDBA0E /* ContentView.swift */; };
+		6F6AC3462FA1E1E00038AF96 /* AppUser.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6FD06C312FA07F7800CDBA0E /* AppUser.swift */; };
+		6F6AC3472FA1E1E00038AF96 /* Question.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6FD06C322FA07F7800CDBA0E /* Question.swift */; };
+		6F6AC3482FA1E1E00038AF96 /* Subject.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6FD06C332FA07F7800CDBA0E /* Subject.swift */; };
+		6F6AC34A2FA1E2000038AF96 /* AuthService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6FD06C352FA07F7800CDBA0E /* AuthService.swift */; };
+		6F6AC34B2FA1E2000038AF96 /* QuizService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6FD06C362FA07F7800CDBA0E /* QuizService.swift */; };
+		6F6AC34C2FA1E2000038AF96 /* CoursesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6FD06C392FA07F7800CDBA0E /* CoursesView.swift */; };
+		6F6AC34D2FA1E2000038AF96 /* HomeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6FD06C3B2FA07F7800CDBA0E /* HomeView.swift */; };
+		6F6AC34E2FA1E2000038AF96 /* HomeViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6FD06C3C2FA07F7800CDBA0E /* HomeViewModel.swift */; };
+		6F6AC34F2FA1E2000038AF96 /* ProfileView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6FD06C3E2FA07F7800CDBA0E /* ProfileView.swift */; };
+		6F6AC3502FA1E2000038AF96 /* QuizView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6FD06C402FA07F7800CDBA0E /* QuizView.swift */; };
+		6F6AC3512FA1E2000038AF96 /* QuizViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6FD06C412FA07F7800CDBA0E /* QuizViewModel.swift */; };
+		6F6AC3522FA1E2000038AF96 /* ReviewView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6FD06C432FA07F7800CDBA0E /* ReviewView.swift */; };
+		6F6AC3532FA1E2000038AF96 /* med_learn_appApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6FD06C472FA07F7800CDBA0E /* med_learn_appApp.swift */; };
+		6F6AC3542FA1E2000038AF96 /* BadgeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6FD06C4B2FA07F7800CDBA0E /* BadgeView.swift */; };
+		6F6AC3552FA1E2000038AF96 /* StatCardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6FD06C4C2FA07F7800CDBA0E /* StatCardView.swift */; };
+		6F6AC3562FA1E2000038AF96 /* XPBarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6FD06C4D2FA07F7800CDBA0E /* XPBarView.swift */; };
+		6F6AC3572FA1E2000038AF96 /* AppTheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6FD06C4F2FA07F7800CDBA0E /* AppTheme.swift */; };
+/* End PBXBuildFile section */
+
 /* Begin PBXFileReference section */
 		6FC71FE92FA06BC8007D6E99 /* med-learn-app.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "med-learn-app.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 		6FD06C2F2FA07F7800CDBA0E /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
@@ -254,6 +275,24 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				6F6AC34A2FA1E2000038AF96 /* AuthService.swift in Sources */,
+				6F6AC34B2FA1E2000038AF96 /* QuizService.swift in Sources */,
+				6F6AC34C2FA1E2000038AF96 /* CoursesView.swift in Sources */,
+				6F6AC34D2FA1E2000038AF96 /* HomeView.swift in Sources */,
+				6F6AC34E2FA1E2000038AF96 /* HomeViewModel.swift in Sources */,
+				6F6AC34F2FA1E2000038AF96 /* ProfileView.swift in Sources */,
+				6F6AC3502FA1E2000038AF96 /* QuizView.swift in Sources */,
+				6F6AC3512FA1E2000038AF96 /* QuizViewModel.swift in Sources */,
+				6F6AC3522FA1E2000038AF96 /* ReviewView.swift in Sources */,
+				6F6AC3532FA1E2000038AF96 /* med_learn_appApp.swift in Sources */,
+				6F6AC3542FA1E2000038AF96 /* BadgeView.swift in Sources */,
+				6F6AC3552FA1E2000038AF96 /* StatCardView.swift in Sources */,
+				6F6AC3562FA1E2000038AF96 /* XPBarView.swift in Sources */,
+				6F6AC3572FA1E2000038AF96 /* AppTheme.swift in Sources */,
+				6F6AC3462FA1E1E00038AF96 /* AppUser.swift in Sources */,
+				6F6AC3472FA1E1E00038AF96 /* Question.swift in Sources */,
+				6F6AC3482FA1E1E00038AF96 /* Subject.swift in Sources */,
+				6F6AC3452FA1E1DB0038AF96 /* ContentView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

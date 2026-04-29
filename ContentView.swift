@@ -81,8 +81,6 @@ struct TabItemView: View {
     }
 }
 
-extension Subject: Swift.Identifiable {}
-
 #Preview {
     ContentView()
 }

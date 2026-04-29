@@ -1,4 +1,5 @@
 import Foundation
+import Combine
 
 // Firebase Auth を追加後に実装を差し替える
 @MainActor
